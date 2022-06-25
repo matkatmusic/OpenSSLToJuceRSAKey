@@ -350,3 +350,86 @@ juce::String PEMFormatKey::decryptBase64String(juce::String base64)
     
     return decryptedString;
 }
+
+void ConvertibleRSAKey::createKeyPair(const int numBits, const int* randomSeeds, const int numRandomSeeds)
+{
+    using namespace juce;
+    jassert (numBits > 16); // not much point using less than this..
+    jassert (numRandomSeeds == 0 || numRandomSeeds >= 2); // you need to provide plenty of seeds here!
+    
+    BigInteger p_ (Primes::createProbablePrime (numBits / 2, 30, randomSeeds, numRandomSeeds / 2));
+    BigInteger q_ (Primes::createProbablePrime (numBits - numBits / 2, 30, randomSeeds == nullptr ? nullptr : (randomSeeds + numRandomSeeds / 2), numRandomSeeds - numRandomSeeds / 2));
+    
+    const BigInteger n_ (p_ * q_);
+    const BigInteger m_ (--p_ * --q_);
+    const BigInteger e_ (findBestCommonDivisor (p_, q_));
+    
+    BigInteger d_ (e_);
+    d_.inverseModulo (m_);
+    
+    /*
+     return part1.toString (16) + "," + part2.toString (16);
+     */
+    
+    publicKey = juce::RSAKey(e_.toString(16) + "," + n_.toString(16));
+    privateKey = juce::RSAKey(d_.toString(16) + "," + n_.toString(16));
+//    publicKey.part1 = e_;
+//    publicKey.part2 = n_;
+//
+//    privateKey.part1 = d_;
+//    privateKey.part2 = n_;
+    
+    p = p_;
+    q = q_;
+}
+
+juce::BigInteger ConvertibleRSAKey::findBestCommonDivisor (const juce::BigInteger& p, const juce::BigInteger& q)
+{
+    // try 3, 5, 9, 17, etc first because these only contain 2 bits and so
+    // are fast to divide + multiply
+    for (int i = 2; i <= 65536; i *= 2)
+    {
+        const juce::BigInteger e (1 + i);
+
+        if (e.findGreatestCommonDivisor (p).isOne() && e.findGreatestCommonDivisor (q).isOne())
+            return e;
+    }
+
+    juce::BigInteger e (4);
+
+    while (! (e.findGreatestCommonDivisor (p).isOne() && e.findGreatestCommonDivisor (q).isOne()))
+        ++e;
+
+    return e;
+}
+
+juce::String ConvertibleRSAKey::getPublicKeyAsPEM()
+{
+    juce::String str;
+    
+    str << "-----BEGIN PUBLIC KEY-----";
+    str << "\n";
+    
+    /*
+     line lengths need to be 64 characters or less
+     key data needs to be encoded as base64.
+     
+     need to write:
+     SEQUENCE (2 elem)
+        SEQUENCE (2 elem)
+            OBJECT IDENTIFIER
+            NULL
+        BIT STRING
+            SEQUENCE (2 elem)
+                INTEGER (modulus)
+                INTEGER (public exponent)
+     
+     Each element consists of an ID code, followed by the length in bytes
+     What I really need to write is an ASN1Encoder
+     */
+    
+    str << "-----END PUBLIC KEY-----";
+    str << "\n";
+    
+    return str;
+}
