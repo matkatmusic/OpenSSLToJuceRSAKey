@@ -428,6 +428,17 @@ juce::String ConvertibleRSAKey::getPublicKeyAsPEM()
      What I really need to write is an ASN1Encoder
      */
     
+    /*
+     const buf = DEREncoder.prototype.encode.call(this, data);
+
+     const p = buf.toString('base64');
+     const out = [ '-----BEGIN ' + options.label + '-----' ];
+     for (let i = 0; i < p.length; i += 64)
+       out.push(p.slice(i, i + 64));
+     out.push('-----END ' + options.label + '-----');
+     return out.join('\n');
+     */
+    
     str << "-----END PUBLIC KEY-----";
     str << "\n";
     
