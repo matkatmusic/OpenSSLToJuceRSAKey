@@ -1,26 +1,31 @@
-///*
-// ==============================================================================
-//
-// Util.h
-// Created: 26 Jun 2022 11:00:48am
-// Author:  Charles Schiermeyer
-//
-// ==============================================================================
-// */
-//
-//#pragma once
-//
-///*
-// a port of https://github.com/digitalbazaar/forge/blob/main/lib/util.js
-// */
-//
-///**
-// * Utility functions for web applications.
-// *
-// * @author Dave Longley
-// *
-// * Copyright (c) 2010-2018 Digital Bazaar, Inc.
-// */
+/*
+ ==============================================================================
+
+ Util.h
+ Created: 26 Jun 2022 11:00:48am
+ Author:  Charles Schiermeyer
+
+ ==============================================================================
+ */
+
+#pragma once
+
+#include <JuceHeader.h>
+/*
+ a port of https://github.com/digitalbazaar/forge/blob/main/lib/util.js
+ */
+
+/**
+ * Utility functions for web applications.
+ *
+ * @author Dave Longley
+ *
+ * Copyright (c) 2010-2018 Digital Bazaar, Inc.
+ */
+
+namespace Forge
+{
+namespace Util
 //var forge = require('./forge');
 //var baseN = require('./baseN');
 //
@@ -164,11 +169,20 @@
 //    return typeof self === 'undefined' ? window : self;
 //})();
 //
+
 // define isArray
-util.isArray = Array.isArray || function(x)
+//util.isArray = Array.isArray || function(x)
+//{
+//    return Object.prototype.toString.call(x) === '[object Array]';
+//};
+template<typename T, typename U>
+bool isArray(const T& t)
 {
-    return Object.prototype.toString.call(x) === '[object Array]';
-};
+    return
+    std::is_same_v<T, juce::Array<U>> ||
+    std::is_same_v<T, std::vector<U>>;
+}
+
 //
 //// define isArrayBuffer
 //util.isArrayBuffer = function(x)
@@ -200,9 +214,10 @@ util.isArray = Array.isArray || function(x)
 //}
 //
 // TODO: set ByteBuffer to best available backing
-util.ByteBuffer = ByteStringBuffer;
+//util.ByteBuffer = ByteStringBuffer;
 
-* Buffer w/BinaryString backing
+
+//* Buffer w/BinaryString backing
 
 /**
  * Constructor for a binary string backed byte buffer.
@@ -210,74 +225,92 @@ util.ByteBuffer = ByteStringBuffer;
  * @param [b] the bytes to wrap (either encoded as string, one byte per
  *          character, or as an ArrayBuffer or Typed Array).
  */
-function ByteStringBuffer(b)
+struct ByteStringBuffer
 {
+//function ByteStringBuffer(b)
+    // the data in this buffer
+    juce::String data;
+    // the pointer for reading from this buffer
+    int read = 0;
+    ByteStringBuffer(juce::String b) : data(b) { }
+    
+    template<typename BufferType>
+    ByteStringBuffer(const BufferType& b) { data = b.toString(); }
+    
+    ByteStringBuffer(const ByteStringBuffer& o) = default;
+//{
     // TODO: update to match DataBuffer API
 
     // the data in this buffer
-    this.data = '';
+//    this.data = '';
     // the pointer for reading from this buffer
-    this.read = 0;
+//    this.read = 0;
 
-    if(typeof b === 'string')
-    {
-        this.data = b;
-    } else if(util.isArrayBuffer(b) || util.isArrayBufferView(b))
-    {
-        if(typeof Buffer !== 'undefined' && b instanceof Buffer)
-        {
-            this.data = b.toString('binary');
-        } else
-        {
-            // convert native buffer to forge buffer
-            // FIXME: support native buffers internally instead
-            var arr = new Uint8Array(b);
-            try
-            {
-                this.data = String.fromCharCode.apply(null, arr);
-            } catch(e)
-            {
-                for(var i = 0; i < arr.length; ++i)
-                {
-                    this.putByte(arr[i]);
-                }
-            }
-        }
-    } else if(b instanceof ByteStringBuffer ||
-              (typeof b === 'object' && typeof b.data === 'string' &&
-               typeof b.read === 'number'))
-    {
-        // copy existing buffer
-        this.data = b.data;
-        this.read = b.read;
-    }
+//    if(typeof b === 'string')
+//    {
+//        this.data = b;
+//    }
+//    else if(util.isArrayBuffer(b) || util.isArrayBufferView(b))
+//    {
+//        if(typeof Buffer !== 'undefined' && b instanceof Buffer)
+//        {
+//            this.data = b.toString('binary');
+//        }
+//        else
+//        {
+//            // convert native buffer to forge buffer
+//            // FIXME: support native buffers internally instead
+//            var arr = new Uint8Array(b);
+//            try
+//            {
+//                this.data = String.fromCharCode.apply(null, arr);
+//            }
+//            catch(e)
+//            {
+//                for(var i = 0; i < arr.length; ++i)
+//                {
+//                    this.putByte(arr[i]);
+//                }
+//            }
+//        }
+//    }
+//    else if(b instanceof ByteStringBuffer ||
+//            (typeof b === 'object' && typeof b.data === 'string' &&
+//             typeof b.read === 'number'))
+//    {
+//        // copy existing buffer
+//        this.data = b.data;
+//        this.read = b.read;
+//    }
 
     // used for v8 optimization
-    this._constructedStringLength = 0;
-}
+    int _constructedStringLength = 0;
+};
+
+using ByteBuffer = ByteStringBuffer;
 //util.ByteStringBuffer = ByteStringBuffer;
 //
-///* Note: This is an optimization for V8-based browsers. When V8 concatenates
-// a string, the strings are only joined logically using a "cons string" or
-// "constructed/concatenated string". These containers keep references to one
-// another and can result in very large memory usage. For example, if a 2MB
-// string is constructed by concatenating 4 bytes together at a time, the
-// memory usage will be ~44MB; so ~22x increase. The strings are only joined
-// together when an operation requiring their joining takes place, such as
-// substr(). This function is called when adding data to this buffer to ensure
-// these types of strings are periodically joined to reduce the memory
-// footprint. */
-//var _MAX_CONSTRUCTED_STRING_LENGTH = 4096;
-//util.ByteStringBuffer.prototype._optimizeConstructedString = function(x)
-//{
-//    this._constructedStringLength += x;
-//    if(this._constructedStringLength > _MAX_CONSTRUCTED_STRING_LENGTH)
-//    {
-//        // this substr() should cause the constructed string to join
-//        this.data.substr(0, 1);
-//        this._constructedStringLength = 0;
-//    }
-//};
+/* Note: This is an optimization for V8-based browsers. When V8 concatenates
+ a string, the strings are only joined logically using a "cons string" or
+ "constructed/concatenated string". These containers keep references to one
+ another and can result in very large memory usage. For example, if a 2MB
+ string is constructed by concatenating 4 bytes together at a time, the
+ memory usage will be ~44MB; so ~22x increase. The strings are only joined
+ together when an operation requiring their joining takes place, such as
+ substr(). This function is called when adding data to this buffer to ensure
+ these types of strings are periodically joined to reduce the memory
+ footprint. */
+var _MAX_CONSTRUCTED_STRING_LENGTH = 4096;
+util.ByteStringBuffer.prototype._optimizeConstructedString = function(x)
+{
+    this._constructedStringLength += x;
+    if(this._constructedStringLength > _MAX_CONSTRUCTED_STRING_LENGTH)
+    {
+        // this substr() should cause the constructed string to join
+        this.data.substr(0, 1);
+        this._constructedStringLength = 0;
+    }
+};
 //
 ///**
 // * Gets the number of bytes in this buffer.
@@ -299,17 +332,17 @@ function ByteStringBuffer(b)
 //    return this.length() <= 0;
 //};
 //
-///**
-// * Puts a byte in this buffer.
-// *
-// * @param b the byte to put.
-// *
-// * @return this buffer.
-// */
-//util.ByteStringBuffer.prototype.putByte = function(b)
-//{
-//    return this.putBytes(String.fromCharCode(b));
-//};
+/**
+ * Puts a byte in this buffer.
+ *
+ * @param b the byte to put.
+ *
+ * @return this buffer.
+ */
+util.ByteStringBuffer.prototype.putByte = function(b)
+{
+    return this.putBytes(String.fromCharCode(b));
+};
 //
 ///**
 // * Puts a byte in this buffer N times.
@@ -340,19 +373,19 @@ function ByteStringBuffer(b)
 //    return this;
 //};
 //
-///**
-// * Puts bytes in this buffer.
-// *
-// * @param bytes the bytes (as a binary encoded string) to put.
-// *
-// * @return this buffer.
-// */
-//util.ByteStringBuffer.prototype.putBytes = function(bytes)
-//{
-//    this.data += bytes;
-//    this._optimizeConstructedString(bytes.length);
-//    return this;
-//};
+/**
+ * Puts bytes in this buffer.
+ *
+ * @param bytes the bytes (as a binary encoded string) to put.
+ *
+ * @return this buffer.
+ */
+util.ByteStringBuffer.prototype.putBytes = function(bytes)
+{
+    this.data += bytes;
+    this._optimizeConstructedString(bytes.length);
+    return this;
+};
 //
 ///**
 // * Puts a UTF-16 encoded string into this buffer.
@@ -3000,3 +3033,5 @@ util.decodeUtf8 = function(str)
 //                               0);
 //    }
 //};
+} //end namespace Util
+} //end namespace Forge

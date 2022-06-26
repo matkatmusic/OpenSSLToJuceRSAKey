@@ -12,7 +12,6 @@
 
 /*
  need:
- [x] util.isArray
  [x] util.createBuffer -> toHex()
  [x] util.bytesToHex
  [x] util.decodeUtf8 -> decodeURIComponent() -> escape()
