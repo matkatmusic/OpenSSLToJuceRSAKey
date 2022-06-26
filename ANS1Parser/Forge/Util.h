@@ -164,11 +164,11 @@
 //    return typeof self === 'undefined' ? window : self;
 //})();
 //
-//// define isArray
-//util.isArray = Array.isArray || function(x)
-//{
-//    return Object.prototype.toString.call(x) === '[object Array]';
-//};
+// define isArray
+util.isArray = Array.isArray || function(x)
+{
+    return Object.prototype.toString.call(x) === '[object Array]';
+};
 //
 //// define isArrayBuffer
 //util.isArrayBuffer = function(x)
@@ -199,62 +199,62 @@
 //    }
 //}
 //
-//// TODO: set ByteBuffer to best available backing
-//util.ByteBuffer = ByteStringBuffer;
-//
-//* Buffer w/BinaryString backing
-//
-///**
-// * Constructor for a binary string backed byte buffer.
-// *
-// * @param [b] the bytes to wrap (either encoded as string, one byte per
-// *          character, or as an ArrayBuffer or Typed Array).
-// */
-//function ByteStringBuffer(b)
-//{
-//    // TODO: update to match DataBuffer API
-//
-//    // the data in this buffer
-//    this.data = '';
-//    // the pointer for reading from this buffer
-//    this.read = 0;
-//
-//    if(typeof b === 'string')
-//    {
-//        this.data = b;
-//    } else if(util.isArrayBuffer(b) || util.isArrayBufferView(b))
-//    {
-//        if(typeof Buffer !== 'undefined' && b instanceof Buffer)
-//        {
-//            this.data = b.toString('binary');
-//        } else
-//        {
-//            // convert native buffer to forge buffer
-//            // FIXME: support native buffers internally instead
-//            var arr = new Uint8Array(b);
-//            try
-//            {
-//                this.data = String.fromCharCode.apply(null, arr);
-//            } catch(e)
-//            {
-//                for(var i = 0; i < arr.length; ++i)
-//                {
-//                    this.putByte(arr[i]);
-//                }
-//            }
-//        }
-//    } else if(b instanceof ByteStringBuffer ||
-//              (typeof b === 'object' && typeof b.data === 'string' &&
-//               typeof b.read === 'number'))
-//    {
-//        // copy existing buffer
-//        this.data = b.data;
-//        this.read = b.read;
-//    }
-//
-//    // used for v8 optimization
-//    this._constructedStringLength = 0;
-//}
+// TODO: set ByteBuffer to best available backing
+util.ByteBuffer = ByteStringBuffer;
+
+* Buffer w/BinaryString backing
+
+/**
+ * Constructor for a binary string backed byte buffer.
+ *
+ * @param [b] the bytes to wrap (either encoded as string, one byte per
+ *          character, or as an ArrayBuffer or Typed Array).
+ */
+function ByteStringBuffer(b)
+{
+    // TODO: update to match DataBuffer API
+
+    // the data in this buffer
+    this.data = '';
+    // the pointer for reading from this buffer
+    this.read = 0;
+
+    if(typeof b === 'string')
+    {
+        this.data = b;
+    } else if(util.isArrayBuffer(b) || util.isArrayBufferView(b))
+    {
+        if(typeof Buffer !== 'undefined' && b instanceof Buffer)
+        {
+            this.data = b.toString('binary');
+        } else
+        {
+            // convert native buffer to forge buffer
+            // FIXME: support native buffers internally instead
+            var arr = new Uint8Array(b);
+            try
+            {
+                this.data = String.fromCharCode.apply(null, arr);
+            } catch(e)
+            {
+                for(var i = 0; i < arr.length; ++i)
+                {
+                    this.putByte(arr[i]);
+                }
+            }
+        }
+    } else if(b instanceof ByteStringBuffer ||
+              (typeof b === 'object' && typeof b.data === 'string' &&
+               typeof b.read === 'number'))
+    {
+        // copy existing buffer
+        this.data = b.data;
+        this.read = b.read;
+    }
+
+    // used for v8 optimization
+    this._constructedStringLength = 0;
+}
 //util.ByteStringBuffer = ByteStringBuffer;
 //
 ///* Note: This is an optimization for V8-based browsers. When V8 concatenates
@@ -791,25 +791,25 @@
 //    return this;
 //};
 //
-///**
-// * Converts this buffer to a hexadecimal string.
-// *
-// * @return a hexadecimal string.
-// */
-//util.ByteStringBuffer.prototype.toHex = function()
-//{
-//    var rval = '';
-//    for(var i = this.read; i < this.data.length; ++i)
-//    {
-//        var b = this.data.charCodeAt(i);
-//        if(b < 16)
-//        {
-//            rval += '0';
-//        }
-//        rval += b.toString(16);
-//    }
-//    return rval;
-//};
+/**
+ * Converts this buffer to a hexadecimal string.
+ *
+ * @return a hexadecimal string.
+ */
+util.ByteStringBuffer.prototype.toHex = function()
+{
+    var rval = '';
+    for(var i = this.read; i < this.data.length; ++i)
+    {
+        var b = this.data.charCodeAt(i);
+        if(b < 16)
+        {
+            rval += '0';
+        }
+        rval += b.toString(16);
+    }
+    return rval;
+};
 //
 ///**
 // * Converts this buffer to a UTF-16 string (standard JavaScript string).
@@ -1584,26 +1584,26 @@
 //
 ///** End Buffer w/UInt8Array backing */
 //
-///**
-// * Creates a buffer that stores bytes. A value may be given to populate the
-// * buffer with data. This value can either be string of encoded bytes or a
-// * regular string of characters. When passing a string of binary encoded
-// * bytes, the encoding `raw` should be given. This is also the default. When
-// * passing a string of characters, the encoding `utf8` should be given.
-// *
-// * @param [input] a string with encoded bytes to store in the buffer.
-// * @param [encoding] (default: 'raw', other: 'utf8').
-// */
-//util.createBuffer = function(input, encoding)
-//{
-//    // TODO: deprecate, use new ByteBuffer() instead
-//    encoding = encoding || 'raw';
-//    if(input !== undefined && encoding === 'utf8')
-//    {
-//        input = util.encodeUtf8(input);
-//    }
-//    return new util.ByteBuffer(input);
-//};
+/**
+ * Creates a buffer that stores bytes. A value may be given to populate the
+ * buffer with data. This value can either be string of encoded bytes or a
+ * regular string of characters. When passing a string of binary encoded
+ * bytes, the encoding `raw` should be given. This is also the default. When
+ * passing a string of characters, the encoding `utf8` should be given.
+ *
+ * @param [input] a string with encoded bytes to store in the buffer.
+ * @param [encoding] (default: 'raw', other: 'utf8').
+ */
+util.createBuffer = function(input, encoding)
+{
+    // TODO: deprecate, use new ByteBuffer() instead
+    encoding = encoding || 'raw';
+    if(input !== undefined && encoding === 'utf8')
+    {
+        input = util.encodeUtf8(input);
+    }
+    return new util.ByteBuffer(input);
+};
 //
 ///**
 // * Fills a string with a particular value. If you want the string to be a byte
@@ -1699,11 +1699,11 @@
 // *
 // * @return the string of hexadecimal characters.
 // */
-//util.bytesToHex = function(bytes)
-//{
-//    // TODO: deprecate: "Deprecated. Use util.binary.hex.encode instead."
-//    return util.createBuffer(bytes).toHex();
-//};
+util.bytesToHex = function(bytes)
+{
+    // TODO: deprecate: "Deprecated. Use util.binary.hex.encode instead."
+    return util.createBuffer(bytes).toHex();
+};
 //
 ///**
 // * Converts an 32-bit integer to 4-big-endian byte string.
@@ -1857,19 +1857,19 @@
 //    return unescape(encodeURIComponent(str));
 //};
 //
-///**
-// * Decodes a binary encoded string that contains bytes that
-// * represent a UTF-8 encoded string of characters -- into a
-// * string of characters (a standard JavaScript string).
-// *
-// * @param str the binary encoded string to decode.
-// *
-// * @return the resulting standard string of characters.
-// */
-//util.decodeUtf8 = function(str)
-//{
-//    return decodeURIComponent(escape(str));
-//};
+/**
+ * Decodes a binary encoded string that contains bytes that
+ * represent a UTF-8 encoded string of characters -- into a
+ * string of characters (a standard JavaScript string).
+ *
+ * @param str the binary encoded string to decode.
+ *
+ * @return the resulting standard string of characters.
+ */
+util.decodeUtf8 = function(str)
+{
+    return decodeURIComponent(escape(str));
+};
 //
 //// binary encoding/decoding tools
 //// FIXME: Experimental. Do not use yet.

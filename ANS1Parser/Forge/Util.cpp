@@ -16,6 +16,6 @@
  [x] util.createBuffer -> toHex()
  [x] util.bytesToHex
  [x] util.decodeUtf8 -> decodeURIComponent() -> escape()
- [] util.ByteBuffer -> ByteStringBuffer
+ [x] util.ByteBuffer -> ByteStringBuffer
  [x] util.ByteStringBuffer.prototype.toHex
  */
