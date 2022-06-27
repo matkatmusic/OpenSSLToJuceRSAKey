@@ -1479,215 +1479,219 @@ struct ASN1 : juce::ReferenceCountedObject
      *
      * @return the string.
      */
-    asn1.prettyPrint = function(obj, level, indentation)
+//    asn1.prettyPrint = function(obj, level, indentation)
+    juce::String prettyPrint(Ptr obj, int level = 0, int indentation = 2)
     {
-        var rval = '';
+        juce::String rval;
         
         // set default level and indentation
-        level = level || 0;
-        indentation = indentation || 2;
+//        level = level || 0;
+//        indentation = indentation || 2;
         
         // start new line for deep levels
         if(level > 0)
         {
-            rval += '\n';
+            rval << "\n";
         }
         
         // create indent
-        var indent = '';
-        for(var i = 0; i < level * indentation; ++i)
+        juce::String indent;
+        for( int i = 0; i < level * indentation; ++i )
         {
-            indent += ' ';
+            indent << " ";
         }
         
         // print class:type
-        rval += indent + 'Tag: ';
-        switch(obj.tagClass)
+        rval << indent;
+        rval << "Tag: ";
+        switch(obj->tagClass)
         {
-            case asn1.Class.UNIVERSAL:
-                rval += 'Universal:';
+            case Class::UNIVERSAL:
+                rval << "Universal:";
                 break;
-            case asn1.Class.APPLICATION:
-                rval += 'Application:';
+            case Class::APPLICATION:
+                rval << "Application:";
                 break;
-            case asn1.Class.CONTEXT_SPECIFIC:
-                rval += 'Context-Specific:';
+            case Class::CONTEXT_SPECIFIC:
+                rval << "Context-Specific:";
                 break;
-            case asn1.Class.PRIVATE:
-                rval += 'Private:';
+            case Class::PRIVATE:
+                rval << "Private:";
                 break;
         }
         
-        if(obj.tagClass === asn1.Class.UNIVERSAL)
+        if( obj->tagClass == Class::UNIVERSAL)
         {
-            rval += obj.type;
+            rval << static_cast<int>(obj->type);
             
             // known types
-            switch(obj.type)
+            switch(obj->type)
             {
-                case asn1.Type.NONE:
-                    rval += ' (None)';
+                case Type::NONE:
+                    rval << " (None)";
                     break;
-                case asn1.Type.BOOLEAN:
-                    rval += ' (Boolean)';
+                case Type::BOOLEAN:
+                    rval << " (Boolean)";
                     break;
-                case asn1.Type.INTEGER:
-                    rval += ' (Integer)';
+                case Type::INTEGER:
+                    rval << " (Integer)";
                     break;
-                case asn1.Type.BITSTRING:
-                    rval += ' (Bit string)';
+                case Type::BITSTRING:
+                    rval << " (Bit string)";
                     break;
-                case asn1.Type.OCTETSTRING:
-                    rval += ' (Octet string)';
+                case Type::OCTETSTRING:
+                    rval << " (Octet string)";
                     break;
-                case asn1.Type.NULL:
-                    rval += ' (Null)';
+                case Type::NULL:
+                    rval << " (Null)";
                     break;
-                case asn1.Type.OID:
-                    rval += ' (Object Identifier)';
+                case Type::OID:
+                    rval << " (Object Identifier)";
                     break;
-                case asn1.Type.ODESC:
-                    rval += ' (Object Descriptor)';
+                case Type::ODESC:
+                    rval << " (Object Descriptor)";
                     break;
-                case asn1.Type.EXTERNAL:
-                    rval += ' (External or Instance of)';
+                case Type::EXTERNAL:
+                    rval << " (External or Instance of)";
                     break;
-                case asn1.Type.REAL:
-                    rval += ' (Real)';
+                case Type::REAL:
+                    rval << " (Real)";
                     break;
-                case asn1.Type.ENUMERATED:
-                    rval += ' (Enumerated)';
+                case Type::ENUMERATED:
+                    rval << " (Enumerated)";
                     break;
-                case asn1.Type.EMBEDDED:
-                    rval += ' (Embedded PDV)';
+                case Type::EMBEDDED:
+                    rval << " (Embedded PDV)";
                     break;
-                case asn1.Type.UTF8:
-                    rval += ' (UTF8)';
+                case Type::UTF8:
+                    rval << " (UTF8)";
                     break;
-                case asn1.Type.ROID:
-                    rval += ' (Relative Object Identifier)';
+                case Type::ROID:
+                    rval << " (Relative Object Identifier)";
                     break;
-                case asn1.Type.SEQUENCE:
-                    rval += ' (Sequence)';
+                case Type::SEQUENCE:
+                    rval << " (Sequence)";
                     break;
-                case asn1.Type.SET:
-                    rval += ' (Set)';
+                case Type::SET:
+                    rval << " (Set)";
                     break;
-                case asn1.Type.PRINTABLESTRING:
-                    rval += ' (Printable String)';
+                case Type::PRINTABLESTRING:
+                    rval << " (Printable String)";
                     break;
-                case asn1.Type.IA5String:
-                    rval += ' (IA5String (ASCII))';
+                case Type::IA5String:
+                    rval << " (IA5String (ASCII))";
                     break;
-                case asn1.Type.UTCTIME:
-                    rval += ' (UTC time)';
+                case Type::UTCTIME:
+                    rval << " (UTC time)";
                     break;
-                case asn1.Type.GENERALIZEDTIME:
-                    rval += ' (Generalized time)';
+                case Type::GENERALIZEDTIME:
+                    rval << " (Generalized time)";
                     break;
-                case asn1.Type.BMPSTRING:
-                    rval += ' (BMP String)';
+                case Type::BMPSTRING:
+                    rval << " (BMP String)";
                     break;
             }
         }
         else
         {
-            rval += obj.type;
+            rval << static_cast<int>(obj->type);
         }
         
-        rval += '\n';
-        rval += indent + 'Constructed: ' + obj.constructed + '\n';
+        rval << "\n";
+        rval << indent + "Constructed: " + static_cast<int>(obj->constructed) + "\n";
         
-        if(obj.composed)
+        if(obj->composed)
         {
-            var subvalues = 0;
-            var sub = '';
-            for(var i = 0; i < obj.value.length; ++i)
+            int subvalues = 0;
+            juce::String sub;
+            for(size_t i = 0; i < obj->value.size(); ++i)
             {
-                if(obj.value[i] !== undefined)
+                if(obj->value[i] != nullptr)
                 {
                     subvalues += 1;
-                    sub += asn1.prettyPrint(obj.value[i], level + 1, indentation);
-                    if((i + 1) < obj.value.length)
+                    sub << prettyPrint(obj->value[i], level + 1, indentation);
+                    if((i + 1) < obj->value.size())
                     {
-                        sub += ',';
+                        sub << ",";
                     }
                 }
             }
-            rval += indent + 'Sub values: ' + subvalues + sub;
+            rval << indent + "Sub values: " + subvalues + sub;
         }
         else
         {
-            rval += indent + 'Value: ';
-            if(obj.type === asn1.Type.OID)
+            rval << indent + "Value: ";
+            if(obj->type == Type::OID)
             {
-                var oid = asn1.derToOid(obj.value);
-                rval += oid;
+                auto oid = derToOid(obj->value);
+                rval << oid;
+#pragma mark Figure out how to implement this
+#if false
                 if(forge.pki && forge.pki.oids)
                 {
                     if(oid in forge.pki.oids)
                     {
-                        rval += ' (' + forge.pki.oids[oid] + ') ';
+                        rval << " (" + forge.pki.oids[oid] + ") ";
                     }
                 }
+#endif
             }
-            if(obj.type === asn1.Type.INTEGER)
+            if(obj->type == Type::INTEGER)
             {
                 try
                 {
-                    rval += asn1.derToInteger(obj.value);
+                    rval << derToInteger(obj->value);
                 }
                 catch(ex)
                 {
-                    rval += '0x' + forge.util.bytesToHex(obj.value);
+                    rval << "0x" + forge.util.bytesToHex(obj->value);
                 }
             }
-            else if(obj.type === asn1.Type.BITSTRING)
+            else if(obj->type == Type::BITSTRING)
             {
                 // TODO: shift bits as needed to display without padding
-                if(obj.value.length > 1)
+                if(obj->value.size() > 1)
                 {
                     // remove unused bits field
-                    rval += '0x' + forge.util.bytesToHex(obj.value.slice(1));
+                    rval << "0x" + forge.util.bytesToHex(obj->value.slice(1));
                 }
                 else
                 {
-                    rval += '(none)';
+                    rval << "(none)";
                 }
                 // show unused bit count
-                if(obj.value.length > 0)
+                if(obj->value.length > 0)
                 {
-                    var unused = obj.value.charCodeAt(0);
+                    auto unused = obj->value.charCodeAt(0);
                     if(unused == 1)
                     {
-                        rval += ' (1 unused bit shown)';
+                        rval << " (1 unused bit shown)";
                     }
                     else if(unused > 1)
                     {
-                        rval += ' (' + unused + ' unused bits shown)';
+                        rval << " (" + unused + " unused bits shown)";
                     }
                 }
             }
-            else if(obj.type === asn1.Type.OCTETSTRING)
+            else if(obj->type == Type::OCTETSTRING)
             {
-                if(!_nonLatinRegex.test(obj.value))
+                if(!_nonLatinRegex.test(obj->value))
                 {
-                    rval += '(' + obj.value + ') ';
+                    rval << '(' + obj->value + ') ';
                 }
-                rval += '0x' + forge.util.bytesToHex(obj.value);
+                rval << '0x' + forge.util.bytesToHex(obj->value);
             }
-            else if(obj.type === asn1.Type.UTF8)
+            else if(obj->type == Type::UTF8)
             {
                 try
                 {
-                    rval += forge.util.decodeUtf8(obj.value);
+                    rval << forge.util.decodeUtf8(obj->value);
                 }
                 catch(e)
                 {
                     if(e.message === 'URI malformed')
                     {
-                        rval +=
-                        '0x' + forge.util.bytesToHex(obj.value) + ' (malformed UTF8)';
+                        rval << '0x' + forge.util.bytesToHex(obj->value) + ' (malformed UTF8)';
                     }
                     else
                     {
@@ -1695,22 +1699,25 @@ struct ASN1 : juce::ReferenceCountedObject
                     }
                 }
             }
-            else if(obj.type === asn1.Type.PRINTABLESTRING ||
-                    obj.type === asn1.Type.IA5String)
+            else if(obj->type == Type::PRINTABLESTRING ||
+                    obj->type == Type::IA5String)
             {
-                rval += obj.value;
+                rval << obj->value;
             }
-            else if(_nonLatinRegex.test(obj.value))
+            else if(_nonLatinRegex.test(obj->value))
             {
-                rval += '0x' + forge.util.bytesToHex(obj.value);
+#pragma mark Figure out how to implement this
+#if false
+                rval << '0x' + forge.util.bytesToHex(obj->value);
+#endif
             }
-            else if(obj.value.length === 0)
+            else if(obj->value.size() == 0)
             {
-                rval += '[null]';
+                rval << "[null]";
             }
             else
             {
-                rval += obj.value;
+                rval << obj->value;
             }
         }
         

@@ -26,6 +26,7 @@
 namespace Forge
 {
 namespace Util
+{
 //var forge = require('./forge');
 //var baseN = require('./baseN');
 //
