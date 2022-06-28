@@ -1432,8 +1432,7 @@ struct ASN1 : juce::ReferenceCountedObject
                             var unused = obj.bitStringContents.charCodeAt(0);
                             if(unused !== 0)
                             {
-                                throw new Error(
-                                                'captureBitStringValue only supported for zero unused bits');
+                                throw new Error('captureBitStringValue only supported for zero unused bits');
                             }
                             capture[v.captureBitStringValue] = obj.bitStringContents.slice(1);
                         }

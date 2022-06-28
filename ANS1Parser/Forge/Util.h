@@ -286,6 +286,12 @@ struct ByteStringBuffer
 
     // used for v8 optimization
     int _constructedStringLength = 0;
+    void _optimizeConstructedString(int x);
+    int length();
+    bool isEmpty();
+    ByteStringBuffer& putByte(char b);
+    ByteStringBuffer& fillWithByte(char b, int n);
+    ByteStringBuffer& putBytes(std::vector<char> bytes);
 };
 
 using ByteBuffer = ByteStringBuffer;
@@ -301,15 +307,18 @@ using ByteBuffer = ByteStringBuffer;
  substr(). This function is called when adding data to this buffer to ensure
  these types of strings are periodically joined to reduce the memory
  footprint. */
-var _MAX_CONSTRUCTED_STRING_LENGTH = 4096;
-util.ByteStringBuffer.prototype._optimizeConstructedString = function(x)
+static constexpr int _MAX_CONSTRUCTED_STRING_LENGTH = 4096;
+//util.ByteStringBuffer.prototype._optimizeConstructedString = function(x)
+void ByteStringBuffer::_optimizeConstructedString(int x)
 {
-    this._constructedStringLength += x;
-    if(this._constructedStringLength > _MAX_CONSTRUCTED_STRING_LENGTH)
+    _constructedStringLength += x;
+    if(_constructedStringLength > _MAX_CONSTRUCTED_STRING_LENGTH)
     {
         // this substr() should cause the constructed string to join
-        this.data.substr(0, 1);
-        this._constructedStringLength = 0;
+#if false
+        data.substring(0, 1);
+#endif
+        _constructedStringLength = 0;
     }
 };
 //
@@ -319,9 +328,10 @@ util.ByteStringBuffer.prototype._optimizeConstructedString = function(x)
 // * @return the number of bytes in this buffer.
 // */
 //util.ByteStringBuffer.prototype.length = function()
-//{
-//    return this.data.length - this.read;
-//};
+int ByteStringBuffer::length()
+{
+    return data.length() - read;
+}
 //
 ///**
 // * Gets whether or not this buffer is empty.
@@ -329,9 +339,10 @@ util.ByteStringBuffer.prototype._optimizeConstructedString = function(x)
 // * @return true if this buffer is empty, false if not.
 // */
 //util.ByteStringBuffer.prototype.isEmpty = function()
-//{
-//    return this.length() <= 0;
-//};
+bool ByteStringBuffer::isEmpty()
+{
+    return length() <= 0;
+};
 //
 /**
  * Puts a byte in this buffer.
@@ -340,10 +351,15 @@ util.ByteStringBuffer.prototype._optimizeConstructedString = function(x)
  *
  * @return this buffer.
  */
-util.ByteStringBuffer.prototype.putByte = function(b)
+ByteStringBuffer& ByteStringBuffer::putByte(char b)
+//util.ByteStringBuffer.prototype.putByte = function(b)
 {
-    return this.putBytes(String.fromCharCode(b));
-};
+//    return this.putBytes(String.fromCharCode(b));
+//    juce::String::fromUTF8(&b, 1)
+    std::vector<char> vec;
+    vec.push_back(b);
+    return putBytes(vec);
+}
 //
 ///**
 // * Puts a byte in this buffer N times.
@@ -354,25 +370,27 @@ util.ByteStringBuffer.prototype.putByte = function(b)
 // * @return this buffer.
 // */
 //util.ByteStringBuffer.prototype.fillWithByte = function(b, n)
-//{
-//    b = String.fromCharCode(b);
-//    var d = this.data;
-//    while(n > 0)
-//    {
-//        if(n & 1)
-//        {
-//            d += b;
-//        }
-//        n >>>= 1;
-//        if(n > 0)
-//        {
-//            b += b;
-//        }
-//    }
-//    this.data = d;
-//    this._optimizeConstructedString(n);
-//    return this;
-//};
+ByteStringBuffer& ByteStringBuffer::fillWithByte(char byte, int n)
+{
+    jassertfalse;
+    auto b = juce::String::fromUTF8(&byte, 1);
+    auto d = data;
+    while(n > 0)
+    {
+        if(n & 1)
+        {
+            d << b;
+        }
+        n >>= 1;
+        if(n > 0)
+        {
+            b += b; // TODO: what is this ????
+        }
+    }
+    data = d;
+    _optimizeConstructedString(n);
+    return *this;
+}
 //
 /**
  * Puts bytes in this buffer.
@@ -381,12 +399,15 @@ util.ByteStringBuffer.prototype.putByte = function(b)
  *
  * @return this buffer.
  */
-util.ByteStringBuffer.prototype.putBytes = function(bytes)
+//util.ByteStringBuffer.prototype.putBytes = function(bytes)
+ByteStringBuffer& ByteStringBuffer::putBytes(std::vector<char> bytes )
 {
-    this.data += bytes;
-    this._optimizeConstructedString(bytes.length);
-    return this;
-};
+//    this.data += bytes;
+    data << juce::String::fromUTF8(bytes.data(), static_cast<int>(bytes.size()));
+//    this._optimizeConstructedString(bytes.length);
+    _optimizeConstructedString(static_cast<int>(bytes.size()));
+    return *this;
+}
 //
 ///**
 // * Puts a UTF-16 encoded string into this buffer.
@@ -676,17 +697,17 @@ util.ByteStringBuffer.prototype.putBytes = function(bytes)
 // *
 // * @return the integer.
 // */
-//util.ByteStringBuffer.prototype.getSignedInt = function(n)
-//{
-//    // getInt checks n
-//    var x = this.getInt(n);
-//    var max = 2 << (n - 2);
-//    if(x >= max)
-//    {
-//        x -= max << 1;
-//    }
-//    return x;
-//};
+util.ByteStringBuffer.prototype.getSignedInt = function(n)
+{
+    // getInt checks n
+    var x = this.getInt(n);
+    var max = 2 << (n - 2);
+    if(x >= max)
+    {
+        x -= max << 1;
+    }
+    return x;
+};
 //
 ///**
 // * Reads bytes out as a binary encoded string and clears them from the
@@ -1299,12 +1320,12 @@ util.ByteStringBuffer.prototype.toHex = function()
 // *
 // * @return the uint16.
 // */
-//util.DataBuffer.prototype.getInt16 = function()
-//{
-//    var rval = this.data.getInt16(this.read);
-//    this.read += 2;
-//    return rval;
-//};
+util.DataBuffer.prototype.getInt16 = function()
+{
+    var rval = this.data.getInt16(this.read);
+    this.read += 2;
+    return rval;
+};
 //
 ///**
 // * Gets a uint24 from this buffer in big-endian order and advances the read

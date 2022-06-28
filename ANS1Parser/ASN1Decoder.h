@@ -129,3 +129,23 @@ private:
     
     ASN1Decoder() = delete;
 };
+
+struct ASN1Encoder
+{
+    static juce::int32 derToInteger(juce::MemoryBlock bytes)
+    {
+        
+    }
+    static juce::int32 derToInteger(juce::String bytes)
+    {
+        
+    }
+    
+    static juce::MemoryBlock toDer(ASN1::Ptr obj)
+    {
+        juce::MemoryBlock bytes;
+        using Byte = juce::uint8;
+        Byte b1 = static_cast<Byte>(obj->tag.tagClass) | static_cast<Byte>(obj->type);
+        
+    }
+};
