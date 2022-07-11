@@ -11,6 +11,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "Pem.h"
 
 /*
  a port of https://github.com/digitalbazaar/forge/blob/main/lib/x509.js
@@ -856,7 +857,7 @@ pki.certificateToPem = function(cert, maxline) {
   };
   return forge.pem.encode(msg, {maxline: maxline});
 };
-#endif
+
 /**
  * Converts an RSA public key from PEM format.
  *
@@ -882,7 +883,7 @@ pki.publicKeyFromPem = function(pem) {
 
   return pki.publicKeyFromAsn1(obj);
 };
-
+#endif
 namespace Forge
 {
 namespace Pki
@@ -917,10 +918,11 @@ KeyType publicKeyFromPem(const PemType& pem)
 
     // convert DER to ASN.1 object
 //    var obj = asn1.fromDer(msg.body);
-    auto obj = Asn1::fromDer(msg.body);
+//    auto obj = Asn1::fromDer(msg.body);
 
 //    return pki.publicKeyFromAsn1(obj);
-    return Pki::publicKeyFromAsn1(obj);
+//    return Pki::publicKeyFromAsn1(obj);
+    return {};
 }
 } //end namespace Pki
 } //end namespace Forge

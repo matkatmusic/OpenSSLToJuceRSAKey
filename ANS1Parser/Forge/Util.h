@@ -14,7 +14,7 @@
 /*
  a port of https://github.com/digitalbazaar/forge/blob/main/lib/util.js
  */
-
+#if false
 /**
  * Utility functions for web applications.
  *
@@ -3057,3 +3057,4 @@ util.decodeUtf8 = function(str)
 //};
 } //end namespace Util
 } //end namespace Forge
+#endif

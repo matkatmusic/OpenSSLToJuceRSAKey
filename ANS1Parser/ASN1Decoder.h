@@ -141,11 +141,11 @@ struct ASN1Encoder
         
     }
     
-    static juce::MemoryBlock toDer(ASN1::Ptr obj)
-    {
-        juce::MemoryBlock bytes;
-        using Byte = juce::uint8;
-        Byte b1 = static_cast<Byte>(obj->tag.tagClass) | static_cast<Byte>(obj->type);
-        
-    }
+//    static juce::MemoryBlock toDer(ASN1::Ptr obj)
+//    {
+//        juce::MemoryBlock bytes;
+//        using Byte = juce::uint8;
+//        Byte b1 = static_cast<Byte>(obj->tag.tagClass) | static_cast<Byte>(obj->type);
+//        
+//    }
 };

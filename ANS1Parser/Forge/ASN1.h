@@ -15,7 +15,7 @@
 /*
  a port of https://github.com/digitalbazaar/forge/blob/main/lib/asn1.js
  */
-
+#if false
 /**
  * Javascript implementation of Abstract Syntax Notation Number One.
  *
@@ -1467,7 +1467,7 @@ struct ASN1 : juce::ReferenceCountedObject
     };
     
     // regex for testing for non-latin characters
-    var _nonLatinRegex = /[^\\u0000-\\u00ff]/;
+//    var _nonLatinRegex = /[^\\u0000-\\u00ff]/;
     
     /**
      * Pretty prints an ASN.1 object to a string.
@@ -1724,3 +1724,4 @@ struct ASN1 : juce::ReferenceCountedObject
     };
 }; //end struct ASN1
 } //end namespace Forge
+#endif
