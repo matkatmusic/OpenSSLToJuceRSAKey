@@ -260,20 +260,22 @@ struct Msg
 };
 
 template<typename ArrayType, typename StringType>
-ArrayType decode(const StringType& str)
+ArrayType decode(const StringType& pemString)
 {
-    //pem.decode = function(str) {
+//pem.decode = function(str) {
     ArrayType rval;
     //  var rval = [];
-    
+    StringType str = pemString;
+    DBG(pemString);
+    DBG("");
     // split string into PEM messages (be lenient w/EOF on BEGIN line)
 //    var rMessage = /\s*-----BEGIN ([A-Z0-9- ]+)-----\r?\n?([\x21-\x7e\s]+?(?:\r?\n\r?\n))?([:A-Za-z0-9+\/=\s]+?)-----END \1-----/g;
-    auto rMessage = juce::String(R"BLA(\s*-----BEGIN ([A-Z0-9- ]+)-----\r?\n?([\x21-\x7e\s]+?(?:\r?\n\r?\n))?([:A-Za-z0-9+\/=\s]+?)-----END \1-----)BLA");
+    auto rMessage = juce::String(R"REGEX(\s*-----BEGIN ([A-Z0-9- ]+)-----\r?\n?([\x21-\x7e\s]+?(?:\r?\n\r?\n))?([:A-Za-z0-9+\/=\s]+?)-----END \1-----)REGEX");
 //    auto rMessage = juce::String("\\s*-----BEGIN ([A-Z0-9- ]+)-----\\r?\\n?([\\x21-\\x7e\\s]+?(?:\\r?\\n\\r?\\n))?([:A-Za-z0-9+\\/=\\s]+?)-----END \\1-----");
 //    var rHeader = /([\x21-\x7e]+):\s*([\x21-\x7e\s^:]+)/;
-    auto rHeader = juce::String(R"BLA(([\x21-\x7e]+):\s*([\x21-\x7e\s^:]+)/)BLA");
+    auto rHeader = juce::String(R"REGEX(([\x21-\x7e]+):\s*([\x21-\x7e\s^:]+))REGEX");
 //    var rCRLF = /\r?\n/;
-    auto rCRLF = juce::String(R"BLA(\r?\n/)BLA");
+    auto rCRLF = juce::String(R"REGEX(\r?\n)REGEX");
 //    var match;
     
     /*
@@ -368,12 +370,16 @@ ArrayType decode(const StringType& str)
         msg.type = type;
         
         juce::MemoryOutputStream mos(msg.body, false);
-        msg.body = juce::Base64::convertFromBase64(mos, match[3]);
+//        msg.body = juce::Base64::convertFromBase64(mos, match[3]);
+        bool successfulConversion = juce::Base64::convertFromBase64(mos, match[3].trim());
+        if(! successfulConversion )
+        {
+            jassertfalse;
+        }
 //        rval.push(msg);
         rval.add(msg);
         
         //skip headers for now.
-        continue;
 #if false
         // no headers
 //        if(!match[2])
@@ -462,6 +468,13 @@ ArrayType decode(const StringType& str)
                             'header must be present if "Proc-Type" is "ENCRYPTED".');
         }
 #endif
+        /*
+         from: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/exec
+         JavaScript RegExp objects are stateful when they have the global or sticky flags set (e.g. /foo/g or /foo/y). They store a lastIndex from the previous match. Using this internally, exec() can be used to iterate over multiple matches in a string of text (with capture groups), as opposed to getting just the matching strings with String.prototype.match().
+         
+         for my purposes, I can replace the 0th entry in the returned match with ''
+         */
+        str = str.replace(match[0], "");
     }
     
 //    if(rval.length === 0)

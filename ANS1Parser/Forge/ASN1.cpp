@@ -10,4 +10,15 @@
 
 #include "ASN1.h"
 
+namespace Forge
+{
+namespace ASN1
+{
 
+void _checkBitsParam(int numBits)
+{
+    jassert( numBits == 8 || numBits == 16 || numBits == 24 || numBits == 32 );
+}
+
+} //end namespace ASN1
+} //end namespace Forge
