@@ -534,8 +534,8 @@ enum class Type : int
 
 template<typename StreamType>
 void _checkBufferLength(StreamType& bytes,
-                        const int& remaining,
-                        const int& numNeeded)
+                        const int remaining,
+                        const int numNeeded)
 {
     if(numNeeded > remaining)
     {
@@ -571,10 +571,14 @@ int getInt(StreamType& bytes, int numBits)
     
     return rval;
 }
-
+/*
+ https://www.javascripttutorial.net/javascript-pass-by-value/#:~:text=JavaScript%20pass%2Dby%2Dvalue%20or,variables%20into%20the%20function%20arguments.
+ 
+ In JavaScript, all function arguments are always passed by value. It means that JavaScript copies the values of the variables into the function arguments.
+ */
 template<typename StreamType>
 juce::int64 _getValueLength(StreamType& bytes,
-                    juce::int64& remaining)
+                    juce::int64 remaining)
 {
 //    var b2 = bytes.getByte();
     juce::uint8 b2;
@@ -694,11 +698,11 @@ typename ASNType::Ptr create(Class tagClass,
 }
 
 template<typename ASNType>
-typename ASNType::Ptr _fromDer(juce::MemoryInputStream& bytes, juce::int64& remaining, int depth, ParseOptions& options)
+typename ASNType::Ptr _fromDer(juce::MemoryInputStream& bytes, juce::int64 remaining, int depth, ParseOptions& options)
 {
     // temporary storage for consumption calculations
 //    var start;
-    jassertfalse;
+//    jassertfalse;
     // minimum length for ASN.1 DER structure is 2
     _checkBufferLength(bytes, remaining, 2);
     
@@ -724,11 +728,11 @@ typename ASNType::Ptr _fromDer(juce::MemoryInputStream& bytes, juce::int64& rema
     
     // get the variable value length and adjust remaining bytes
 //    start = bytes.length();
-    auto start = bytes.getPosition();
+    auto start = bytes.getNumBytesRemaining();
 //    var length = _getValueLength(bytes, remaining);
     auto length = _getValueLength(bytes, remaining);
 //    remaining -= start - bytes.length();
-    remaining -= bytes.getNumBytesRemaining() - start;
+    remaining -= start - bytes.getNumBytesRemaining();
     
     
     // ensure there are enough bytes to get the value
@@ -968,12 +972,15 @@ typename ASNType::Ptr _fromDer(juce::MemoryInputStream& bytes, juce::int64& rema
         else
         {
 //            value = bytes.getBytes(length);
-            juce::MemoryBlock data;
-            data.ensureSize(length);
-            auto numRead = bytes.read(data.getData(), length);
-            jassert(numRead == length);
-            remaining -= length;
-            byteArray = data;
+            if( length > 0 )
+            {
+                juce::MemoryBlock data;
+                data.ensureSize(length);
+                auto numRead = bytes.read(data.getData(), length);
+                jassert(numRead == length);
+                remaining -= length;
+                byteArray = data;
+            }
         }
     }
     
