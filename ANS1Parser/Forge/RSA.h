@@ -1512,10 +1512,20 @@ pki.privateKeyToAsn1 = pki.privateKeyToRSAPrivateKey = function(key) {
  *
  * @return the public key.
  */
-pki.publicKeyFromAsn1 = function(obj) {
+#endif
+namespace Forge
+{
+namespace PKI
+{
+template<typename ASNType>
+juce::RSAKey publicKeyFromASN1(ASNType obj)
+{
+//pki.publicKeyFromAsn1 = function(obj) {
   // get SubjectPublicKeyInfo
-  var capture = {};
-  var errors = [];
+//  var capture = {};
+    
+//  var errors = [];
+    
   if(asn1.validate(obj, publicKeyValidator, capture, errors)) {
     // get oid
     var oid = asn1.derToOid(capture.publicKeyOid);
@@ -1546,6 +1556,11 @@ pki.publicKeyFromAsn1 = function(obj) {
     new BigInteger(e, 16));
 };
 
+    
+}
+} //end namespace PKI
+} //end namespace forge
+#if false
 /**
  * Converts a public key to an ASN.1 SubjectPublicKeyInfo.
  *

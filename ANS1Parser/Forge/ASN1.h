@@ -1725,88 +1725,133 @@ asn1.derToInteger = function(bytes) {
  *
  * @return true on success, false on failure.
  */
-asn1.validate = function(obj, v, capture, errors) {
-  var rval = false;
-
-  // ensure tag class and type are the same if specified
-  if((obj.tagClass === v.tagClass || typeof(v.tagClass) === 'undefined') &&
-    (obj.type === v.type || typeof(v.type) === 'undefined')) {
-    // ensure constructed flag is the same if specified
-    if(obj.constructed === v.constructed ||
-      typeof(v.constructed) === 'undefined') {
-      rval = true;
-
-      // handle sub values
-      if(v.value && forge.util.isArray(v.value)) {
-        var j = 0;
-        for(var i = 0; rval && i < v.value.length; ++i) {
-          rval = v.value[i].optional || false;
-          if(obj.value[j]) {
-            rval = asn1.validate(obj.value[j], v.value[i], capture, errors);
-            if(rval) {
-              ++j;
-            } else if(v.value[i].optional) {
-              rval = true;
+#endif
+namespace ASN1
+{
+namespace Forge
+{
+//asn1.validate = function(obj, v, capture, errors) {
+template<
+    typename ASNType,
+    typename ASNValidator,
+    typename CaptureMap,
+    typename ErrorsArray
+>
+bool validate(ASNType obj,
+              ASNValidator v,
+              CaptureMap capture,
+              ErrorsArray errors)
+{
+//    var rval = false;
+    bool rval = false;
+    
+    // ensure tag class and type are the same if specified
+//    if((obj.tagClass === v.tagClass || typeof(v.tagClass) === 'undefined') &&
+//       (obj.type === v.type || typeof(v.type) === 'undefined'))
+    if( (obj.tagClass == v.tagClass ) && (obj.type == v.type ))
+    {
+        // ensure constructed flag is the same if specified
+//        if(obj.constructed === v.constructed ||
+//           typeof(v.constructed) === 'undefined')
+        if( obj.constructed == v.constructed )
+        {
+            rval = true;
+            
+            // handle sub values
+            if(v.value && forge.util.isArray(v.value))
+            {
+                var j = 0;
+                for(var i = 0; rval && i < v.value.length; ++i)
+                {
+                    rval = v.value[i].optional || false;
+                    if(obj.value[j])
+                    {
+                        rval = asn1.validate(obj.value[j], v.value[i], capture, errors);
+                        if(rval)
+                        {
+                            ++j;
+                        }
+                        else if(v.value[i].optional)
+                        {
+                            rval = true;
+                        }
+                    }
+                    if(!rval && errors)
+                    {
+                        errors.push(
+                                    '[' + v.name + '] ' +
+                                    'Tag class "' + v.tagClass + '", type "' +
+                                    v.type + '" expected value length "' +
+                                    v.value.length + '", got "' +
+                                    obj.value.length + '"');
+                    }
+                }
             }
-          }
-          if(!rval && errors) {
+            
+            if(rval && capture)
+            {
+                if(v.capture)
+                {
+                    capture[v.capture] = obj.value;
+                }
+                if(v.captureAsn1)
+                {
+                    capture[v.captureAsn1] = obj;
+                }
+                if(v.captureBitStringContents && 'bitStringContents' in obj)
+                {
+                    capture[v.captureBitStringContents] = obj.bitStringContents;
+                }
+                if(v.captureBitStringValue && 'bitStringContents' in obj)
+                {
+                    var value;
+                    if(obj.bitStringContents.length < 2)
+                    {
+                        capture[v.captureBitStringValue] = '';
+                    }
+                    else
+                    {
+                        // FIXME: support unused bits with data shifting
+                        var unused = obj.bitStringContents.charCodeAt(0);
+                        if(unused !== 0)
+                        {
+                            throw new Error(
+                                            'captureBitStringValue only supported for zero unused bits');
+                        }
+                        capture[v.captureBitStringValue] = obj.bitStringContents.slice(1);
+                    }
+                }
+            }
+        }
+        else if(errors)
+        {
             errors.push(
-              '[' + v.name + '] ' +
-              'Tag class "' + v.tagClass + '", type "' +
-              v.type + '" expected value length "' +
-              v.value.length + '", got "' +
-              obj.value.length + '"');
-          }
+                        '[' + v.name + '] ' +
+                        'Expected constructed "' + v.constructed + '", got "' +
+                        obj.constructed + '"');
         }
-      }
-
-      if(rval && capture) {
-        if(v.capture) {
-          capture[v.capture] = obj.value;
-        }
-        if(v.captureAsn1) {
-          capture[v.captureAsn1] = obj;
-        }
-        if(v.captureBitStringContents && 'bitStringContents' in obj) {
-          capture[v.captureBitStringContents] = obj.bitStringContents;
-        }
-        if(v.captureBitStringValue && 'bitStringContents' in obj) {
-          var value;
-          if(obj.bitStringContents.length < 2) {
-            capture[v.captureBitStringValue] = '';
-          } else {
-            // FIXME: support unused bits with data shifting
-            var unused = obj.bitStringContents.charCodeAt(0);
-            if(unused !== 0) {
-              throw new Error(
-                'captureBitStringValue only supported for zero unused bits');
-            }
-            capture[v.captureBitStringValue] = obj.bitStringContents.slice(1);
-          }
-        }
-      }
-    } else if(errors) {
-      errors.push(
-        '[' + v.name + '] ' +
-        'Expected constructed "' + v.constructed + '", got "' +
-        obj.constructed + '"');
     }
-  } else if(errors) {
-    if(obj.tagClass !== v.tagClass) {
-      errors.push(
-        '[' + v.name + '] ' +
-        'Expected tag class "' + v.tagClass + '", got "' +
-        obj.tagClass + '"');
+    else if(errors)
+    {
+        if(obj.tagClass !== v.tagClass)
+        {
+            errors.push(
+                        '[' + v.name + '] ' +
+                        'Expected tag class "' + v.tagClass + '", got "' +
+                        obj.tagClass + '"');
+        }
+        if(obj.type !== v.type)
+        {
+            errors.push(
+                        '[' + v.name + '] ' +
+                        'Expected type "' + v.type + '", got "' + obj.type + '"');
+        }
     }
-    if(obj.type !== v.type) {
-      errors.push(
-        '[' + v.name + '] ' +
-        'Expected type "' + v.type + '", got "' + obj.type + '"');
-    }
-  }
-  return rval;
+    return rval;
 };
-
+} //end namespace ASN1
+} //end namespace Forge
+#if false
 // regex for testing for non-latin characters
 //var _nonLatinRegex = /[^\\u0000-\\u00ff]/;
 
