@@ -15,6 +15,7 @@
 /*
  a port of https://github.com/digitalbazaar/forge/blob/main/lib/rsa.js
  */
+#include "ASN1.h"
 #if false
 /**
  * Javascript implementation of basic RSA algorithms.
@@ -243,45 +244,75 @@ var rsaPublicKeyValidator = {
     capture: 'publicKeyExponent'
   }]
 };
-
+#endif
 // validator for an SubjectPublicKeyInfo structure
 // Note: Currently only works with an RSA public key
-var publicKeyValidator = forge.pki.rsa.publicKeyValidator = {
-  name: 'SubjectPublicKeyInfo',
-  tagClass: asn1.Class.UNIVERSAL,
-  type: asn1.Type.SEQUENCE,
-  constructed: true,
-  captureAsn1: 'subjectPublicKeyInfo',
-  value: [{
-    name: 'SubjectPublicKeyInfo.AlgorithmIdentifier',
+namespace Forge
+{
+namespace RSA
+{
+struct Validator : juce::ReferenceCountedObject
+{
+    using Ptr = juce::ReferenceCountedObjectPtr<Validator>;
+    juce::String name;
+    Forge::ASN1::Class tagClass;
+    Forge::ASN1::Type type;
+    bool constructed;
+    bool optional;
+    juce::String captureAsn1;
+    std::vector<Ptr> value;
+};
+
+//var publicKeyValidator = forge.pki.rsa.publicKeyValidator = {
+Validator::Ptr getPublicKeyValidator()
+{
+    Validator::Ptr = new Validator();
+    
+    name: 'SubjectPublicKeyInfo',
     tagClass: asn1.Class.UNIVERSAL,
     type: asn1.Type.SEQUENCE,
     constructed: true,
-    value: [{
-      name: 'AlgorithmIdentifier.algorithm',
-      tagClass: asn1.Class.UNIVERSAL,
-      type: asn1.Type.OID,
-      constructed: false,
-      capture: 'publicKeyOid'
-    }]
-  }, {
-    // subjectPublicKey
-    name: 'SubjectPublicKeyInfo.subjectPublicKey',
-    tagClass: asn1.Class.UNIVERSAL,
-    type: asn1.Type.BITSTRING,
-    constructed: false,
-    value: [{
-      // RSAPublicKey
-      name: 'SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey',
-      tagClass: asn1.Class.UNIVERSAL,
-      type: asn1.Type.SEQUENCE,
-      constructed: true,
-      optional: true,
-      captureAsn1: 'rsaPublicKey'
-    }]
-  }]
+    captureAsn1: 'subjectPublicKeyInfo',
+    value: [
+        {
+            name: 'SubjectPublicKeyInfo.AlgorithmIdentifier',
+            tagClass: asn1.Class.UNIVERSAL,
+            type: asn1.Type.SEQUENCE,
+            constructed: true,
+            value: [
+                {
+                    name: 'AlgorithmIdentifier.algorithm',
+                    tagClass: asn1.Class.UNIVERSAL,
+                    type: asn1.Type.OID,
+                    constructed: false,
+                    capture: 'publicKeyOid'
+                }
+            ]
+        },
+        {
+            // subjectPublicKey
+            name: 'SubjectPublicKeyInfo.subjectPublicKey',
+            tagClass: asn1.Class.UNIVERSAL,
+            type: asn1.Type.BITSTRING,
+            constructed: false,
+            value: [
+                {
+                    // RSAPublicKey
+                    name: 'SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey',
+                    tagClass: asn1.Class.UNIVERSAL,
+                    type: asn1.Type.SEQUENCE,
+                    constructed: true,
+                    optional: true,
+                    captureAsn1: 'rsaPublicKey'
+                }
+            ]
+        }
+    ]
 };
 
+} //end namespace RSA
+} //end namespace Forge
+#if false
 // validator for a DigestInfo structure
 var digestInfoValidator = {
   name: 'DigestInfo',
