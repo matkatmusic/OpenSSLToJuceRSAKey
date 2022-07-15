@@ -369,14 +369,27 @@ ArrayType decode(const StringType& pemString)
         Msg msg;
         msg.type = type;
         
-        juce::MemoryOutputStream mos(msg.body, false);
-//        msg.body = juce::Base64::convertFromBase64(mos, match[3]);
-        bool successfulConversion = juce::Base64::convertFromBase64(mos, match[3].trim());
-        if(! successfulConversion )
+        //remove all \r\n from msg.body
+        auto base64Text = match[3];
+        DBG( base64Text.length() );
+        DBG( base64Text);
+        base64Text = base64Text.removeCharacters("\r\n");
+//        DBG( base64Text );
+        DBG( base64Text.length() );
         {
-            jassertfalse;
+            juce::MemoryOutputStream mos(msg.body, false);
+//            msg.body = juce::Base64::convertFromBase64(mos, match[3]);
+            bool successfulConversion = juce::Base64::convertFromBase64(mos, base64Text);
+            
+            //        bool successfulConversion = msg.body.fromBase64Encoding(base64Text);
+            if(! successfulConversion )
+            {
+                jassertfalse;
+            }
         }
 //        rval.push(msg);
+        
+        DBG( msg.body.getSize() );
         rval.add(msg);
         
         //skip headers for now.

@@ -698,7 +698,7 @@ typename ASNType::Ptr _fromDer(juce::MemoryInputStream& bytes, juce::int64& rema
 {
     // temporary storage for consumption calculations
 //    var start;
-    
+    jassertfalse;
     // minimum length for ASN.1 DER structure is 2
     _checkBufferLength(bytes, remaining, 2);
     
@@ -728,7 +728,7 @@ typename ASNType::Ptr _fromDer(juce::MemoryInputStream& bytes, juce::int64& rema
 //    var length = _getValueLength(bytes, remaining);
     auto length = _getValueLength(bytes, remaining);
 //    remaining -= start - bytes.length();
-    remaining -= start - bytes.getNumBytesRemaining();
+    remaining -= bytes.getNumBytesRemaining() - start;
     
     
     // ensure there are enough bytes to get the value
