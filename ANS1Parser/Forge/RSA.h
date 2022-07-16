@@ -257,8 +257,8 @@ struct Validator : juce::ReferenceCountedObject
     juce::String name;
     Forge::ASN1::Class tagClass;
     Forge::ASN1::Type type;
-    bool constructed;
-    bool optional;
+    bool constructed = false;
+    bool optional = false;
     juce::String captureAsn1;
     std::vector<Ptr> value;
 };
@@ -266,48 +266,57 @@ struct Validator : juce::ReferenceCountedObject
 //var publicKeyValidator = forge.pki.rsa.publicKeyValidator = {
 Validator::Ptr getPublicKeyValidator()
 {
-    Validator::Ptr = new Validator();
-    
-    name: 'SubjectPublicKeyInfo',
-    tagClass: asn1.Class.UNIVERSAL,
-    type: asn1.Type.SEQUENCE,
-    constructed: true,
-    captureAsn1: 'subjectPublicKeyInfo',
-    value: [
+    Validator::Ptr ptr = new Validator
+    {
+        .name = "SubjectPublicKeyInfo",
+        .tagClass = ASN1::Class::UNIVERSAL,
+        .type = ASN1::Type::SEQUENCE,
+        .constructed = true,
+        .captureAsn1 = "subjectPublicKeyInfo",
+        .value =
         {
-            name: 'SubjectPublicKeyInfo.AlgorithmIdentifier',
-            tagClass: asn1.Class.UNIVERSAL,
-            type: asn1.Type.SEQUENCE,
-            constructed: true,
-            value: [
+            new Validator
+            {
+                .name = "SubjectPublicKeyInfo.AlgorithmIdentifier",
+                .tagClass = ASN1::Class::UNIVERSAL,
+                .type = ASN1::Type::SEQUENCE,
+                .constructed = true,
+                .value =
                 {
-                    name: 'AlgorithmIdentifier.algorithm',
-                    tagClass: asn1.Class.UNIVERSAL,
-                    type: asn1.Type.OID,
-                    constructed: false,
-                    capture: 'publicKeyOid'
+                    new Validator
+                    {
+                        .name = "AlgorithmIdentifier.algorithm",
+                        .tagClass = ASN1::Class::UNIVERSAL,
+                        .type = ASN1::Type::OID,
+                        .constructed = false,
+                        .optional = false,
+                        .captureAsn1 = "publicKeyOid",
+                    }
                 }
-            ]
-        },
-        {
-            // subjectPublicKey
-            name: 'SubjectPublicKeyInfo.subjectPublicKey',
-            tagClass: asn1.Class.UNIVERSAL,
-            type: asn1.Type.BITSTRING,
-            constructed: false,
-            value: [
+            },
+            new Validator
+            {
+                // subjectPublicKey
+                .name = "SubjectPublicKeyInfo.subjectPublicKey",
+                .tagClass = ASN1::Class::UNIVERSAL,
+                .type = ASN1::Type::BITSTRING,
+                .constructed = false,
+                .value =
                 {
-                    // RSAPublicKey
-                    name: 'SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey',
-                    tagClass: asn1.Class.UNIVERSAL,
-                    type: asn1.Type.SEQUENCE,
-                    constructed: true,
-                    optional: true,
-                    captureAsn1: 'rsaPublicKey'
+                    new Validator
+                    {
+                        // RSAPublicKey
+                        .name =  "SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey",
+                        .tagClass = ASN1::Class::UNIVERSAL,
+                        .type = ASN1::Type::SEQUENCE,
+                        .constructed = true,
+                        .optional = true,
+                        .captureAsn1 = "rsaPublicKey"
+                    }
                 }
-            ]
+            }
         }
-    ]
+    }
 };
 
 } //end namespace RSA
