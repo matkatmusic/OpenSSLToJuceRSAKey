@@ -132,14 +132,14 @@ private:
 
 struct ASN1Encoder
 {
-    static juce::int32 derToInteger(juce::MemoryBlock bytes)
-    {
-        
-    }
-    static juce::int32 derToInteger(juce::String bytes)
-    {
-        
-    }
+//    static juce::int32 derToInteger(juce::MemoryBlock bytes)
+//    {
+//        
+//    }
+//    static juce::int32 derToInteger(juce::String bytes)
+//    {
+//        
+//    }
     
 //    static juce::MemoryBlock toDer(ASN1::Ptr obj)
 //    {

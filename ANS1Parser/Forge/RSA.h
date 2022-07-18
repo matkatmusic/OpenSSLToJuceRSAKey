@@ -1681,16 +1681,21 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
     }
     
     // FIXME: inefficient, get a BigInteger that uses byte strings
-    var n = forge.util.createBuffer(capture.publicKeyModulus).toHex();
-    var e = forge.util.createBuffer(capture.publicKeyExponent).toHex();
-    
-    // set public key
-    return pki.setRsaPublicKey(
-                               new BigInteger(n, 16),
-                               new BigInteger(e, 16));
-};
-
-    
+//    var n = forge.util.createBuffer(capture.publicKeyModulus).toHex();
+//    var e = forge.util.createBuffer(capture.publicKeyExponent).toHex();
+//
+//    // set public key
+//    return pki.setRsaPublicKey(
+//                               new BigInteger(n, 16),
+//                               new BigInteger(e, 16));
+    juce::BigInteger n, e;
+    n.loadFromMemoryBlock( capture.rsaPublicKey->byteArray );
+    e.loadFromMemoryBlock(capture.subjectPublicKeyInfo->byteArray);
+    auto key = juce::RSAKey(n.toString(16) + "," + e.toString(16));
+    if(key.isValid())
+        return key;
+    jassertfalse;
+    return {}; //returns an invalid key
 }
 } //end namespace PKI
 } //end namespace forge

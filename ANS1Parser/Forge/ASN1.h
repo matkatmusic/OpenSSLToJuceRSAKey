@@ -534,8 +534,8 @@ enum class Type : int
 
 template<typename StreamType>
 void _checkBufferLength(StreamType& bytes,
-                        const int remaining,
-                        const int numNeeded)
+                        const juce::int64 remaining,
+                        const juce::int64 numNeeded)
 {
     if(numNeeded > remaining)
     {
@@ -834,7 +834,8 @@ typename ASNType::Ptr _fromDer(juce::MemoryInputStream& bytes, juce::int64 remai
         auto bytesRemaining = bytes.getNumBytesRemaining();
         bitStringContents = std::make_unique<juce::MemoryBlock>();
         bitStringContents->ensureSize(bytesRemaining);
-        auto numRead = bytes.read(bitStringContents->getData(), bytesRemaining);
+        auto numRead = bytes.read(bitStringContents->getData(),
+                                  static_cast<int>(bytesRemaining));
         jassert(numRead == bytesRemaining);
         bytes.setPosition(pos);
     }
@@ -983,7 +984,7 @@ typename ASNType::Ptr _fromDer(juce::MemoryInputStream& bytes, juce::int64 remai
             {
                 juce::MemoryBlock data;
                 data.ensureSize(length);
-                auto numRead = bytes.read(data.getData(), length);
+                auto numRead = bytes.read(data.getData(), static_cast<int>(length));
                 jassert(numRead == length);
                 remaining -= length;
                 byteArray = data;
@@ -1019,7 +1020,7 @@ typename ASNType::Ptr fromDer(const juce::MemoryBlock& bytes, ParseOptions optio
 //        bytes = forge.util.createBuffer(bytes);
 //    }
 //    var byteCount = bytes.length();
-    auto byteCount = bytes.getSize();
+//    auto byteCount = bytes.getSize();
     /*
      _fromDer uses a byte buffer, which acts like a juce::InputStream.
      internally that byte buffer class uses a 'read' pointer.
@@ -1390,56 +1391,7 @@ namespace Forge
 namespace ASN1
 {
 //asn1.derToOid = function(bytes) {
-juce::String derToOid(juce::String str)
-{
-//    var oid;
-    juce::String oid;
-    
-    // wrap in buffer if needed
-//    if(typeof bytes === 'string')
-//    {
-//        bytes = forge.util.createBuffer(bytes);
-//    }
-    auto stdString = str.toStdString();
-    auto block = juce::MemoryBlock(stdString.data(), stdString.length());
-    auto bytes = juce::MemoryInputStream(block, false);
-    
-    // first byte is 40 * value1 + value2
-//    var b = bytes.getByte();
-    auto b = bytes.readByte();
-    
-//    oid = Math.floor(b / 40) + '.' + (b % 40);
-    oid << std::floor( static_cast<float>(b) / 40.f );
-    oid << ".";
-    oid << b % 40;
-    
-    // other bytes are each value in base 128 with 8th bit set except for
-    // the last byte for each value
-//    var value = 0;
-    juce::uint64 value = 0;
-//    while(bytes.length() > 0)
-    while(! bytes.isExhausted() )
-    {
-//        b = bytes.getByte();
-        b = bytes.readByte();
-        value = value << 7;
-        // not the last byte for the value
-        if(b & 0x80)
-        {
-            value += (b & 0x7F);
-        }
-        else
-        {
-            // last byte
-//            oid += '.' + (value + b);
-            oid << ".";
-            oid << (value + b);
-            value = 0;
-        }
-    }
-    
-    return oid;
-};
+juce::String derToOid(juce::String str);
 }//end namespace ASN1
 }//end namespace Forge
 #if false
