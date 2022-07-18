@@ -10,7 +10,7 @@
 
 #include "Oids.h"
 
-const std::map<juce::String, juce::String>& Forge::oids()
+const std::map<juce::String, juce::String>& Forge::Pki::oids()
 {
     static std::map<juce::String, juce::String> map;
     

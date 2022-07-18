@@ -16,6 +16,7 @@
  a port of https://github.com/digitalbazaar/forge/blob/main/lib/rsa.js
  */
 #include "ASN1.h"
+#include "Oids.h"
 #if false
 /**
  * Javascript implementation of basic RSA algorithms.
@@ -220,30 +221,6 @@ var rsaPrivateKeyValidator = {
     capture: 'privateKeyCoefficient'
   }]
 };
-
-// validator for an RSA public key
-var rsaPublicKeyValidator = {
-  // RSAPublicKey
-  name: 'RSAPublicKey',
-  tagClass: asn1.Class.UNIVERSAL,
-  type: asn1.Type.SEQUENCE,
-  constructed: true,
-  value: [{
-    // modulus (n)
-    name: 'RSAPublicKey.modulus',
-    tagClass: asn1.Class.UNIVERSAL,
-    type: asn1.Type.INTEGER,
-    constructed: false,
-    capture: 'publicKeyModulus'
-  }, {
-    // publicExponent (e)
-    name: 'RSAPublicKey.exponent',
-    tagClass: asn1.Class.UNIVERSAL,
-    type: asn1.Type.INTEGER,
-    constructed: false,
-    capture: 'publicKeyExponent'
-  }]
-};
 #endif
 // validator for an SubjectPublicKeyInfo structure
 // Note: Currently only works with an RSA public key
@@ -254,69 +231,181 @@ namespace RSA
 struct Validator : juce::ReferenceCountedObject
 {
     using Ptr = juce::ReferenceCountedObjectPtr<Validator>;
+    
     juce::String name;
     Forge::ASN1::Class tagClass;
     Forge::ASN1::Type type;
     bool constructed = false;
     bool optional = false;
     juce::String captureAsn1;
+    juce::String capture;
     std::vector<Ptr> value;
+//
+//    Validator(juce::String name_,
+//              Forge::ASN1::Class tagClass_,
+//              Forge::ASN1::Type type_,
+//              bool constructed_,
+//              bool optional_ = false,
+//              juce::String captureAsn1_ = {},
+//              std::vector<Ptr> value_ = {}) :
+//    name(name_),
+//    tagClass(tagClass_),
+//    type(type_),
+//    constructed(constructed_),
+//    optional(optional_),
+//    captureAsn1(captureAsn1_),
+//    value(value_)
+//    {
+//    }
 };
+// validator for an RSA public key
+Forge::RSA::Validator::Ptr getRSAPublicKeyValidator()
+{
+//var rsaPublicKeyValidator = {
+  // RSAPublicKey
+//  name: 'RSAPublicKey',
+//  tagClass: asn1.Class.UNIVERSAL,
+//  type: asn1.Type.SEQUENCE,
+//  constructed: true,
+//  value: [{
+//    // modulus (n)
+//    name: 'RSAPublicKey.modulus',
+//    tagClass: asn1.Class.UNIVERSAL,
+//    type: asn1.Type.INTEGER,
+//    constructed: false,
+//    capture: 'publicKeyModulus'
+//  }, {
+//    // publicExponent (e)
+//    name: 'RSAPublicKey.exponent',
+//    tagClass: asn1.Class.UNIVERSAL,
+//    type: asn1.Type.INTEGER,
+//    constructed: false,
+//    capture: 'publicKeyExponent'
+//  }]
+    
+    Validator::Ptr modulus = new Validator();
+    modulus->name = "RSAPublicKey.modulus";
+    modulus->tagClass = ASN1::Class::UNIVERSAL;
+    modulus->type = ASN1::Type::INTEGER;
+    modulus->constructed = false;
+    modulus->capture = "publicKeyModulus";
+    
+    Validator::Ptr exponent = new Validator();
+    exponent->name = "RSAPublicKey.exponent";
+    exponent->tagClass = ASN1::Class::UNIVERSAL;
+    exponent->type = ASN1::Type::INTEGER;
+    exponent->constructed = false;
+    exponent->capture = "publicKeyExponent";
+    
+    Validator::Ptr rsaPublicKeyValidator = new Validator();
+    rsaPublicKeyValidator->name = "RSAPublicKey";
+    rsaPublicKeyValidator->tagClass = ASN1::Class::UNIVERSAL;
+    rsaPublicKeyValidator->type = ASN1::Type::SEQUENCE;
+    rsaPublicKeyValidator->constructed = true;
+    rsaPublicKeyValidator->value =
+    {
+        modulus,
+        exponent
+    };
+    
+    return rsaPublicKeyValidator;
+}
+
 
 //var publicKeyValidator = forge.pki.rsa.publicKeyValidator = {
-Validator::Ptr getPublicKeyValidator()
+Forge::RSA::Validator::Ptr getPublicKeyValidator()
 {
-    Validator::Ptr ptr = new Validator
+    /*
+     // validator for an SubjectPublicKeyInfo structure
+     // Note: Currently only works with an RSA public key
+     var publicKeyValidator = forge.pki.rsa.publicKeyValidator = {
+       name: 'SubjectPublicKeyInfo',
+       tagClass: asn1.Class.UNIVERSAL,
+       type: asn1.Type.SEQUENCE,
+       constructed: true,
+       captureAsn1: 'subjectPublicKeyInfo',
+       value: [{
+         name: 'SubjectPublicKeyInfo.AlgorithmIdentifier',
+         tagClass: asn1.Class.UNIVERSAL,
+         type: asn1.Type.SEQUENCE,
+         constructed: true,
+         value: [{
+           name: 'AlgorithmIdentifier.algorithm',
+           tagClass: asn1.Class.UNIVERSAL,
+           type: asn1.Type.OID,
+           constructed: false,
+           capture: 'publicKeyOid'
+         }]
+       }, {
+         // subjectPublicKey
+         name: 'SubjectPublicKeyInfo.subjectPublicKey',
+         tagClass: asn1.Class.UNIVERSAL,
+         type: asn1.Type.BITSTRING,
+         constructed: false,
+         value: [{
+           // RSAPublicKey
+           name: 'SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey',
+           tagClass: asn1.Class.UNIVERSAL,
+           type: asn1.Type.SEQUENCE,
+           constructed: true,
+           optional: true,
+           captureAsn1: 'rsaPublicKey'
+         }]
+       }]
+     };
+     */
+    Validator::Ptr SubjectPublicKeyInfo = new Validator();
+//#if false
+    
+    SubjectPublicKeyInfo->name = "SubjectPublicKeyInfo";
+    SubjectPublicKeyInfo->tagClass = ASN1::Class::UNIVERSAL;
+    SubjectPublicKeyInfo->type = ASN1::Type::SEQUENCE;
+    SubjectPublicKeyInfo->constructed = true;
+    SubjectPublicKeyInfo->captureAsn1 = "subjectPublicKeyInfo";
+    
+    Validator::Ptr AlgorithmIdentifier = new Validator();
+    AlgorithmIdentifier->name = "SubjectPublicKeyInfo.AlgorithmIdentifier";
+    AlgorithmIdentifier->tagClass = ASN1::Class::UNIVERSAL;
+    AlgorithmIdentifier->type = ASN1::Type::SEQUENCE;
+    AlgorithmIdentifier->constructed = true;
+    
+    Validator::Ptr algorithm = new Validator();
+    algorithm->name = "AlgorithmIdentifier.algorithm";
+    algorithm->tagClass = ASN1::Class::UNIVERSAL;
+    algorithm->type = ASN1::Type::OID;
+    algorithm->constructed = false;
+    algorithm->captureAsn1 = "publicKeyOid";
+    
+    AlgorithmIdentifier->value =
     {
-        .name = "SubjectPublicKeyInfo",
-        .tagClass = ASN1::Class::UNIVERSAL,
-        .type = ASN1::Type::SEQUENCE,
-        .constructed = true,
-        .captureAsn1 = "subjectPublicKeyInfo",
-        .value =
-        {
-            new Validator
-            {
-                .name = "SubjectPublicKeyInfo.AlgorithmIdentifier",
-                .tagClass = ASN1::Class::UNIVERSAL,
-                .type = ASN1::Type::SEQUENCE,
-                .constructed = true,
-                .value =
-                {
-                    new Validator
-                    {
-                        .name = "AlgorithmIdentifier.algorithm",
-                        .tagClass = ASN1::Class::UNIVERSAL,
-                        .type = ASN1::Type::OID,
-                        .constructed = false,
-                        .optional = false,
-                        .captureAsn1 = "publicKeyOid",
-                    }
-                }
-            },
-            new Validator
-            {
-                // subjectPublicKey
-                .name = "SubjectPublicKeyInfo.subjectPublicKey",
-                .tagClass = ASN1::Class::UNIVERSAL,
-                .type = ASN1::Type::BITSTRING,
-                .constructed = false,
-                .value =
-                {
-                    new Validator
-                    {
-                        // RSAPublicKey
-                        .name =  "SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey",
-                        .tagClass = ASN1::Class::UNIVERSAL,
-                        .type = ASN1::Type::SEQUENCE,
-                        .constructed = true,
-                        .optional = true,
-                        .captureAsn1 = "rsaPublicKey"
-                    }
-                }
-            }
-        }
-    }
+        algorithm
+    };
+    
+    Validator::Ptr subjectPublicKey = new Validator();
+    subjectPublicKey->name = "SubjectPublicKeyInfo.subjectPublicKey";
+    subjectPublicKey->tagClass = ASN1::Class::UNIVERSAL;
+    subjectPublicKey->type = ASN1::Type::BITSTRING;
+    subjectPublicKey->constructed = false;
+    
+    Validator::Ptr RSAPublicKey = new Validator();
+    RSAPublicKey->name = "SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey";
+    RSAPublicKey->tagClass = ASN1::Class::UNIVERSAL;
+    RSAPublicKey->type = ASN1::Type::SEQUENCE;
+    RSAPublicKey->constructed = true;
+    RSAPublicKey->optional = true;
+    RSAPublicKey->captureAsn1 = "rsaPublicKey";
+    subjectPublicKey->value =
+    {
+        RSAPublicKey
+    };
+    
+    SubjectPublicKeyInfo->value =
+    {
+        AlgorithmIdentifier,
+        subjectPublicKey,
+    };
+
+    return SubjectPublicKeyInfo;
 };
 
 } //end namespace RSA
@@ -1532,37 +1621,73 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
 //pki.publicKeyFromAsn1 = function(obj) {
   // get SubjectPublicKeyInfo
 //  var capture = {};
-    
+    /*
+     In javascript, 'var name = {};' defines an empty object
+     Objects are passed by reference, not by copy.
+     You can use this syntax to declare properties (member variables) of objects:
+     
+     var obj = {};
+     obj['name'] = value;
+     
+     you can then access that property using 'dot' syntax:
+     
+     obj.name = newValue;
+     
+     the 'capture' object is used this way.
+     the 'validate' function adds properties to capture dynamically.
+     However, there is a fixed set of properties being added,
+     and those properties come from the Validator instance used.
+     */
+    Forge::ASN1::Capture capture;
 //  var errors = [];
+    std::vector<juce::String> errors;
     
-  if(asn1.validate(obj, publicKeyValidator, capture, errors)) {
-    // get oid
-    var oid = asn1.derToOid(capture.publicKeyOid);
-    if(oid !== pki.oids.rsaEncryption) {
-      var error = new Error('Cannot read public key. Unknown OID.');
-      error.oid = oid;
-      throw error;
+//  if(asn1.validate(obj, publicKeyValidator, capture, errors)) {
+    auto publicKeyValidator = Forge::RSA::getPublicKeyValidator();
+    if( Forge::ASN1::validate(obj, publicKeyValidator, capture, errors))
+    {
+        // get oid
+//        var oid = asn1.derToOid(capture.publicKeyOid);
+        auto oid = Forge::ASN1::derToOid(capture.publicKeyOid);
+//        if(oid !== pki.oids.rsaEncryption)
+        const auto& oids = Forge::Pki::oids();
+        if( oids.find(oid) == oids.end() )
+        {
+//            var error = new Error('Cannot read public key. Unknown OID.');
+            DBG( "Cannot read public key. Unknown OID.");
+//            error.oid = oid;
+//            throw error;
+            jassertfalse;
+            return {}; //returns an invalid key
+        }
+        obj = capture.rsaPublicKey;
     }
-    obj = capture.rsaPublicKey;
-  }
-
-  // get RSA params
-  errors = [];
-  if(!asn1.validate(obj, rsaPublicKeyValidator, capture, errors)) {
-    var error = new Error('Cannot read public key. ' +
-      'ASN.1 object does not contain an RSAPublicKey.');
-    error.errors = errors;
-    throw error;
-  }
-
-  // FIXME: inefficient, get a BigInteger that uses byte strings
-  var n = forge.util.createBuffer(capture.publicKeyModulus).toHex();
-  var e = forge.util.createBuffer(capture.publicKeyExponent).toHex();
-
-  // set public key
-  return pki.setRsaPublicKey(
-    new BigInteger(n, 16),
-    new BigInteger(e, 16));
+    
+    // get RSA params
+//    errors = [];
+    errors.clear();
+    
+//    if(!asn1.validate(obj, rsaPublicKeyValidator, capture, errors))
+    auto rsaPublicKeyValidator = Forge::RSA::getRSAPublicKeyValidator();
+    if( !Forge::ASN1::validate(obj, rsaPublicKeyValidator, capture, errors) )
+    {
+//        var error = new Error('Cannot read public key. ' +
+//                              'ASN.1 object does not contain an RSAPublicKey.');
+//        error.errors = errors;
+//        throw error;
+        DBG( "Cannot read public key. ASN.1 object does not contain an RSAPublicKey." );
+        jassertfalse;
+        return {}; //returns an invalid key
+    }
+    
+    // FIXME: inefficient, get a BigInteger that uses byte strings
+    var n = forge.util.createBuffer(capture.publicKeyModulus).toHex();
+    var e = forge.util.createBuffer(capture.publicKeyExponent).toHex();
+    
+    // set public key
+    return pki.setRsaPublicKey(
+                               new BigInteger(n, 16),
+                               new BigInteger(e, 16));
 };
 
     

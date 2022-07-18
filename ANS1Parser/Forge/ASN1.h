@@ -652,6 +652,13 @@ struct ASNObject : juce::ReferenceCountedObject
     juce::MemoryBlock bitStringContents;
 };
 
+struct Capture
+{
+    juce::String publicKeyOid;
+    ASNObject::Ptr rsaPublicKey = new ASNObject();
+    ASNObject::Ptr subjectPublicKeyInfo = new ASNObject();
+};
+
 template<typename ASNType>
 typename ASNType::Ptr create(Class tagClass,
                Type type,
@@ -1377,37 +1384,65 @@ asn1.oidToDer = function(oid) {
  *
  * @return the OID dot-separated string.
  */
-asn1.derToOid = function(bytes) {
-  var oid;
-
-  // wrap in buffer if needed
-  if(typeof bytes === 'string') {
-    bytes = forge.util.createBuffer(bytes);
-  }
-
-  // first byte is 40 * value1 + value2
-  var b = bytes.getByte();
-  oid = Math.floor(b / 40) + '.' + (b % 40);
-
-  // other bytes are each value in base 128 with 8th bit set except for
-  // the last byte for each value
-  var value = 0;
-  while(bytes.length() > 0) {
-    b = bytes.getByte();
-    value = value << 7;
-    // not the last byte for the value
-    if(b & 0x80) {
-      value += b & 0x7F;
-    } else {
-      // last byte
-      oid += '.' + (value + b);
-      value = 0;
+#endif
+namespace Forge
+{
+namespace ASN1
+{
+//asn1.derToOid = function(bytes) {
+juce::String derToOid(juce::String str)
+{
+//    var oid;
+    juce::String oid;
+    
+    // wrap in buffer if needed
+//    if(typeof bytes === 'string')
+//    {
+//        bytes = forge.util.createBuffer(bytes);
+//    }
+    auto stdString = str.toStdString();
+    auto block = juce::MemoryBlock(stdString.data(), stdString.length());
+    auto bytes = juce::MemoryInputStream(block, false);
+    
+    // first byte is 40 * value1 + value2
+//    var b = bytes.getByte();
+    auto b = bytes.readByte();
+    
+//    oid = Math.floor(b / 40) + '.' + (b % 40);
+    oid << std::floor( static_cast<float>(b) / 40.f );
+    oid << ".";
+    oid << b % 40;
+    
+    // other bytes are each value in base 128 with 8th bit set except for
+    // the last byte for each value
+//    var value = 0;
+    juce::uint64 value = 0;
+//    while(bytes.length() > 0)
+    while(! bytes.isExhausted() )
+    {
+//        b = bytes.getByte();
+        b = bytes.readByte();
+        value = value << 7;
+        // not the last byte for the value
+        if(b & 0x80)
+        {
+            value += (b & 0x7F);
+        }
+        else
+        {
+            // last byte
+//            oid += '.' + (value + b);
+            oid << ".";
+            oid << (value + b);
+            value = 0;
+        }
     }
-  }
-
-  return oid;
+    
+    return oid;
 };
-
+}//end namespace ASN1
+}//end namespace Forge
+#if false
 /**
  * Converts a UTCTime value to a date.
  *
@@ -1726,9 +1761,10 @@ asn1.derToInteger = function(bytes) {
  * @return true on success, false on failure.
  */
 #endif
-namespace ASN1
-{
+
 namespace Forge
+{
+namespace ASN1
 {
 //asn1.validate = function(obj, v, capture, errors) {
 template<
@@ -1737,9 +1773,9 @@ template<
     typename CaptureMap,
     typename ErrorsArray
 >
-bool validate(ASNType obj,
-              ASNValidator v,
-              CaptureMap capture,
+bool validate(ASNType& obj,
+              ASNValidator& v,
+              CaptureMap& capture,
               ErrorsArray errors)
 {
 //    var rval = false;
@@ -1758,15 +1794,19 @@ bool validate(ASNType obj,
             rval = true;
             
             // handle sub values
-            if(v.value && forge.util.isArray(v.value))
+//            if(v.value && forge.util.isArray(v.value))
+            if( ! v.value.isEmpty() )
             {
-                var j = 0;
-                for(var i = 0; rval && i < v.value.length; ++i)
+//                var j = 0;
+                int j = 0;
+//                for(var i = 0; rval && i < v.value.length; ++i)
+                for( int i = 0; rval == true && i < v.value.size(); ++i )
                 {
                     rval = v.value[i].optional || false;
                     if(obj.value[j])
                     {
-                        rval = asn1.validate(obj.value[j], v.value[i], capture, errors);
+//                        rval = asn1.validate(obj.value[j], v.value[i], capture, errors);
+                        rval = Forge::ASN1::validate(obj.value[j], v.value[i], capture, errors);
                         if(rval)
                         {
                             ++j;
@@ -1776,14 +1816,20 @@ bool validate(ASNType obj,
                             rval = true;
                         }
                     }
-                    if(!rval && errors)
+                    if(!rval && errors.size() > 0 )
                     {
-                        errors.push(
-                                    '[' + v.name + '] ' +
-                                    'Tag class "' + v.tagClass + '", type "' +
-                                    v.type + '" expected value length "' +
-                                    v.value.length + '", got "' +
-                                    obj.value.length + '"');
+//                        errors.push(
+//                                    '[' + v.name + '] ' +
+//                                    'Tag class "' + v.tagClass + '", type "' +
+//                                    v.type + '" expected value length "' +
+//                                    v.value.length + '", got "' +
+//                                    obj.value.length + '"');
+                        errors.push_back("[" + v.name + "] " +
+                                         "Tag class \"" + v.tagClass + "\", type \"" +
+                                         v.type + "\" expected value length \"" +
+                                         v.value.length + "\", got \"" +
+                                         obj.value.length + "\""
+                                         );
                     }
                 }
             }
@@ -1798,53 +1844,76 @@ bool validate(ASNType obj,
                 {
                     capture[v.captureAsn1] = obj;
                 }
-                if(v.captureBitStringContents && 'bitStringContents' in obj)
+//                if(v.captureBitStringContents && 'bitStringContents' in obj)
+                if( v.captureBitStringContents && ! obj.bitStringContents.isEmpty())
                 {
                     capture[v.captureBitStringContents] = obj.bitStringContents;
                 }
-                if(v.captureBitStringValue && 'bitStringContents' in obj)
+//                if(v.captureBitStringValue && 'bitStringContents' in obj)
+                if( v.captureBitStringValue && ! obj.bitStringContents.isEmpty())
                 {
-                    var value;
-                    if(obj.bitStringContents.length < 2)
+//                    var value;
+//                    if(obj.bitStringContents.length < 2)
+                    if( obj.bitStringContents.length() < 2 )
                     {
-                        capture[v.captureBitStringValue] = '';
+//                        capture[v.captureBitStringValue] = '';
+                        capture[v.captureBitStringValue] = "";
                     }
                     else
                     {
                         // FIXME: support unused bits with data shifting
-                        var unused = obj.bitStringContents.charCodeAt(0);
-                        if(unused !== 0)
+//                        var unused = obj.bitStringContents.charCodeAt(0);
+                        juce::uint8 unused = obj.bitStringContents[0];
+//                        if(unused !== 0)
+                        if( unused != 0 )
                         {
-                            throw new Error(
-                                            'captureBitStringValue only supported for zero unused bits');
+//                            throw new Error(
+//                                            'captureBitStringValue only supported for zero unused bits');
+                            DBG( "captureBitStringValue only supported for zero unused bits");
+                            jassertfalse;
+                            return false;
                         }
-                        capture[v.captureBitStringValue] = obj.bitStringContents.slice(1);
+                        
+                        jassertfalse;
+//                        capture[v.captureBitStringValue] = obj.bitStringContents.slice(1);
+                        /*
+                        'slice' functions leave the original buffer/string intact without modifying the read index.
+                        */
+                        auto& bytes = obj.bitStringContents;
+                        auto pos = bytes.getPosition();
+                        auto bytesToRead = 1;
+                        auto bitStringContents = std::make_unique<juce::MemoryBlock>();
+                        bitStringContents->ensureSize(bytesToRead);
+                        auto numRead = bytes.read(bitStringContents->getData(), bytesToRead);
+                        jassert(numRead == bytesToRead);
+                        bytes.setPosition(pos);
+                        capture[v.captureBitStringValue] = bitStringContents;
                     }
                 }
             }
         }
-        else if(errors)
+        else if(errors.size() > 0)
         {
-            errors.push(
-                        '[' + v.name + '] ' +
-                        'Expected constructed "' + v.constructed + '", got "' +
-                        obj.constructed + '"');
+            errors.push_back(
+                        "[" + v.name + "] " +
+                        "Expected constructed \"" + v.constructed + "\", got \"" +
+                        obj.constructed + "\"");
         }
     }
-    else if(errors)
+    else if(errors.size() > 0)
     {
-        if(obj.tagClass !== v.tagClass)
+        if(obj.tagClass != v.tagClass)
         {
-            errors.push(
-                        '[' + v.name + '] ' +
-                        'Expected tag class "' + v.tagClass + '", got "' +
-                        obj.tagClass + '"');
+            errors.push_back(
+                             "[" + v.name + "] " +
+                        "Expected tag class \"" + v.tagClass + "\", got \"" +
+                        obj.tagClass + "\"");
         }
-        if(obj.type !== v.type)
+        if(obj.type != v.type)
         {
-            errors.push(
-                        '[' + v.name + '] ' +
-                        'Expected type "' + v.type + '", got "' + obj.type + '"');
+            errors.push_back(
+                             "[" + v.name + "] " +
+                             "Expected type \"" + v.type + "\", got \"" + obj.type + "\"");
         }
     }
     return rval;

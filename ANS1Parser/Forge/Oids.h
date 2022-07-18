@@ -25,7 +25,8 @@
 namespace Forge
 {
 //var forge = require('./forge');
-
+namespace Pki
+{
 //forge.pki = forge.pki || {};
 //var oids = module.exports = forge.pki.oids = forge.oids = forge.oids || {};
 const std::map<juce::String, juce::String>& oids();
@@ -196,4 +197,5 @@ const std::map<juce::String, juce::String>& oids();
 //_IN('1.3.6.1.5.5.7.3.3', 'codeSigning');
 //_IN('1.3.6.1.5.5.7.3.4', 'emailProtection');
 //_IN('1.3.6.1.5.5.7.3.8', 'timeStamping');
+} //end namespace Pki
 } //end namespace Forge
