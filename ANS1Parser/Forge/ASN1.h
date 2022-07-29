@@ -652,11 +652,33 @@ struct ASNObject : juce::ReferenceCountedObject
     juce::MemoryBlock bitStringContents;
 };
 
-struct Capture
+struct Capture : juce::ReferenceCountedObject
 {
+    using Ptr = juce::ReferenceCountedObjectPtr<Capture>;
     juce::String publicKeyOid;
     ASNObject::Ptr rsaPublicKey = new ASNObject();
     ASNObject::Ptr subjectPublicKeyInfo = new ASNObject();
+    
+    const juce::var& operator[](juce::String name)
+    {
+        if( data.indexOf(name) == -1 )
+        {
+            DBG( "Capture does not contain a property for: " << name);
+        }
+        return data[name];
+    }
+    bool set(juce::String name, juce::var value)
+    {
+        auto ok = data.set(name, value);
+        if( ok == false )
+        {
+            DBG( "failed to set " << name << " in Capture" );
+        }
+        
+        return ok;
+    }
+private:
+    juce::NamedValueSet data;
 };
 
 template<typename ASNType>
@@ -1747,23 +1769,24 @@ bool validate(ASNType& obj,
             
             // handle sub values
 //            if(v.value && forge.util.isArray(v.value))
-            if( ! v.value.isEmpty() )
+            if( ! v.value.empty() )
             {
 //                var j = 0;
                 int j = 0;
 //                for(var i = 0; rval && i < v.value.length; ++i)
                 for( int i = 0; rval == true && i < v.value.size(); ++i )
                 {
-                    rval = v.value[i].optional || false;
-                    if(obj.value[j])
+                    rval = v.value[i]->optional || false;
+//                    if(obj.value[j])
+                    if( obj.objectList[j] != nullptr )
                     {
 //                        rval = asn1.validate(obj.value[j], v.value[i], capture, errors);
-                        rval = Forge::ASN1::validate(obj.value[j], v.value[i], capture, errors);
+                        rval = Forge::ASN1::validate(*obj.objectList[j], *v.value[i], capture, errors);
                         if(rval)
                         {
                             ++j;
                         }
-                        else if(v.value[i].optional)
+                        else if(v.value[i]->optional)
                         {
                             rval = true;
                         }
@@ -1777,29 +1800,34 @@ bool validate(ASNType& obj,
 //                                    v.value.length + '", got "' +
 //                                    obj.value.length + '"');
                         errors.push_back("[" + v.name + "] " +
-                                         "Tag class \"" + v.tagClass + "\", type \"" +
-                                         v.type + "\" expected value length \"" +
-                                         v.value.length + "\", got \"" +
-                                         obj.value.length + "\""
+                                         "Tag class \"" + juce::String(static_cast<int>(v.tagClass)) + "\", type \"" +
+                                         juce::String(static_cast<int>(v.type)) + "\" expected value length \"" +
+                                         juce::String(static_cast<int>(v.value.size())) + "\", got \"" +
+                                                      juce::String(static_cast<int>(obj.objectList.size())) + "\""
                                          );
                     }
                 }
             }
             
-            if(rval && capture)
+            if(rval && capture != nullptr)
             {
-                if(v.capture)
+                if(v.capture.length())
                 {
-                    capture[v.capture] = obj.value;
+                    //Consider adding operator[](juce::String) to the capture class
+                    //make it return juce::var
+//                    (*capture)[v.capture] = obj.value;
+                    capture->set(v.capture, obj.objectList);
                 }
-                if(v.captureAsn1)
+                if(v.captureAsn1.length())
                 {
-                    capture[v.captureAsn1] = obj;
+//                    (*capture)[v.captureAsn1] = obj;
+                    capture->set(v.captureAsn1, obj);
                 }
 //                if(v.captureBitStringContents && 'bitStringContents' in obj)
                 if( v.captureBitStringContents && ! obj.bitStringContents.isEmpty())
                 {
-                    capture[v.captureBitStringContents] = obj.bitStringContents;
+//                    (*capture)[v.captureBitStringContents] = obj.bitStringContents;
+                    capture->set(v.captureBitStringContents, obj.bitStringContents);
                 }
 //                if(v.captureBitStringValue && 'bitStringContents' in obj)
                 if( v.captureBitStringValue && ! obj.bitStringContents.isEmpty())
@@ -1809,7 +1837,8 @@ bool validate(ASNType& obj,
                     if( obj.bitStringContents.length() < 2 )
                     {
 //                        capture[v.captureBitStringValue] = '';
-                        capture[v.captureBitStringValue] = "";
+//                        capture[v.captureBitStringValue] = "";
+                        capture->set(v.captureBitStringValue, "");
                     }
                     else
                     {
@@ -2074,3 +2103,29 @@ asn1.prettyPrint = function(obj, level, indentation) {
   return rval;
 };
 #endif
+
+namespace juce
+{
+template<>
+struct VariantConverter<std::vector<Forge::ASN1::ASNObject::Ptr>>
+{
+    static juce::var toVar(std::vector<Forge::ASN1::ASNObject::Ptr> vec)
+    {
+        juce::MemoryBlock block;
+        
+        juce::MemoryOutputStream mos(block, true);
+        for( auto p : vec )
+        {
+            //TODO: write a ASNObject::toVar() function
+            //TODO: write a ASNObject::fromVar() function
+        }
+        
+        return juce::var {block};
+    }
+    
+    static std::vector<Forge::ASN1::ASNObject::Ptr> fromVar(juce::var v)
+    {
+        jassert(v.isBinaryData());
+    }
+};
+}

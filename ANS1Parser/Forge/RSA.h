@@ -1615,9 +1615,17 @@ namespace Forge
 {
 namespace PKI
 {
+
+template<typename T, typename U>
+struct IsReferenceCountedType : std::false_type { };
+
+template<typename U>
+struct IsReferenceCountedType<juce::ReferenceCountedObjectPtr<U>, U> : std::true_type { };
+
 template<typename ASNType>
 juce::RSAKey publicKeyFromASN1(ASNType obj)
 {
+    static_assert(IsReferenceCountedType<ASNType, typename ASNType::ReferencedType>::value, "ASNType must be an instance of a juce::ReferenceCountedObjectPtr");
 //pki.publicKeyFromAsn1 = function(obj) {
   // get SubjectPublicKeyInfo
 //  var capture = {};
@@ -1638,17 +1646,17 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
      However, there is a fixed set of properties being added,
      and those properties come from the Validator instance used.
      */
-    Forge::ASN1::Capture capture;
+    Forge::ASN1::Capture::Ptr capture = new Forge::ASN1::Capture();
 //  var errors = [];
     std::vector<juce::String> errors;
     
 //  if(asn1.validate(obj, publicKeyValidator, capture, errors)) {
     auto publicKeyValidator = Forge::RSA::getPublicKeyValidator();
-    if( Forge::ASN1::validate(obj, publicKeyValidator, capture, errors))
+    if( Forge::ASN1::validate(*obj, *publicKeyValidator, capture, errors))
     {
         // get oid
 //        var oid = asn1.derToOid(capture.publicKeyOid);
-        auto oid = Forge::ASN1::derToOid(capture.publicKeyOid);
+        auto oid = Forge::ASN1::derToOid(capture->publicKeyOid);
 //        if(oid !== pki.oids.rsaEncryption)
         const auto& oids = Forge::Pki::oids();
         if( oids.find(oid) == oids.end() )
@@ -1660,7 +1668,7 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
             jassertfalse;
             return {}; //returns an invalid key
         }
-        obj = capture.rsaPublicKey;
+        obj = capture->rsaPublicKey;
     }
     
     // get RSA params
@@ -1669,7 +1677,7 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
     
 //    if(!asn1.validate(obj, rsaPublicKeyValidator, capture, errors))
     auto rsaPublicKeyValidator = Forge::RSA::getRSAPublicKeyValidator();
-    if( !Forge::ASN1::validate(obj, rsaPublicKeyValidator, capture, errors) )
+    if( !Forge::ASN1::validate(*obj, *rsaPublicKeyValidator, capture, errors) )
     {
 //        var error = new Error('Cannot read public key. ' +
 //                              'ASN.1 object does not contain an RSAPublicKey.');
@@ -1689,8 +1697,8 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
 //                               new BigInteger(n, 16),
 //                               new BigInteger(e, 16));
     juce::BigInteger n, e;
-    n.loadFromMemoryBlock( capture.rsaPublicKey->byteArray );
-    e.loadFromMemoryBlock(capture.subjectPublicKeyInfo->byteArray);
+    n.loadFromMemoryBlock( capture->rsaPublicKey->byteArray );
+    e.loadFromMemoryBlock(capture->subjectPublicKeyInfo->byteArray);
     auto key = juce::RSAKey(n.toString(16) + "," + e.toString(16));
     if(key.isValid())
         return key;
