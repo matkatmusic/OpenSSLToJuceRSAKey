@@ -237,6 +237,8 @@ struct Validator : juce::ReferenceCountedObject
     Forge::ASN1::Type type;
     bool constructed = false;
     bool optional = false;
+    bool captureBitStringContents = false;
+    bool captureBitStringValue = false;
     juce::String captureAsn1;
     juce::String capture;
     std::vector<Ptr> value;

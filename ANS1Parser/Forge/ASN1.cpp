@@ -71,5 +71,130 @@ juce::String derToOid(juce::String str)
     return oid;
 };
 
+juce::var ASNObject::toVar() const
+{
+    juce::var v;
+    
+    v.append(static_cast<int>(tagClass));
+    v.append(static_cast<int>(type));
+    v.append(constructed);
+    v.append(composed);
+    
+    if(! objectList.empty() )
+    {
+        juce::var objList;
+        for( auto ptr : objectList )
+        {
+            objList.append(ptr->toVar());
+        }
+        
+        v.append(objList);
+    }
+    else
+    {
+        v.append("empty object list");
+    }
+    
+    if(! byteArray.isEmpty() )
+    {
+        v.append(byteArray);
+    }
+    else
+    {
+        v.append("empty byte array");
+    }
+    
+    if(! bitStringContents.isEmpty() )
+    {
+        v.append(bitStringContents);
+    }
+    else
+    {
+        v.append("empty bit string contents");
+    }
+    
+    return v;
+}
+
+ASNObject::Ptr ASNObject::fromVar(juce::var v)
+{
+    jassert(v.isArray());
+    
+    if(! v.isArray() )
+    {
+        return {};
+    }
+    
+    Ptr ptr = new ASNObject();
+    
+    auto* arr = v.getArray();
+    for( int i = 0; i < arr->size(); ++i )
+    {
+        auto& var = arr->getReference(i);
+        if( i == 0 )
+        {
+            ptr->tagClass = static_cast<Class>(static_cast<int>(var));
+        }
+        else if( i == 1 )
+        {
+            ptr->type = static_cast<Type>(static_cast<int>(var));
+        }
+        else if( i == 2)
+        {
+            ptr->constructed = static_cast<bool>(var);
+        }
+        else if( i == 3 )
+        {
+            ptr->composed = static_cast<bool>(var);
+        }
+        else if( i == 4)
+        {
+            if( var.isString() && var == "empty object list" )
+            {
+                //do nothing.
+            }
+            else
+            {
+                jassert( var.isArray() );
+                auto* objListArr = var.getArray();
+                for( auto obj : *objListArr )
+                {
+                    ptr->objectList.push_back( fromVar(obj) );
+                }
+            }
+        }
+        else if( i == 5 )
+        {
+            if( var.isString() && var == "empty byte array")
+            {
+                //do nothing
+            }
+            else
+            {
+                auto* mb = var.getBinaryData();
+                jassert(mb != nullptr);
+                jassert( mb->getSize() != 0 );
+                ptr->byteArray = *mb;
+            }
+        }
+        else if( i == 6 )
+        {
+            if( var.isString() && var == "empty bit string contents" )
+            {
+                //do nothing
+            }
+            else
+            {
+                auto* mb = var.getBinaryData();
+                jassert(mb != nullptr);
+                jassert( mb->getSize() != 0 );
+                ptr->bitStringContents = *mb;
+            }
+        }
+    }
+    
+    return ptr;
+}
+
 } //end namespace ASN1
 } //end namespace Forge

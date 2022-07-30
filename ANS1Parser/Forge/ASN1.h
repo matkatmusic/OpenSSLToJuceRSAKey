@@ -650,8 +650,52 @@ struct ASNObject : juce::ReferenceCountedObject
     juce::MemoryBlock byteArray;
     
     juce::MemoryBlock bitStringContents;
+    
+    juce::var toVar() const;
+    static Ptr fromVar(juce::var v);
 };
 
+
+} //end namespace ASN1
+} //end namespace Forge
+
+namespace juce
+{
+template<>
+struct VariantConverter<std::vector<Forge::ASN1::ASNObject::Ptr>>
+{
+    static juce::var toVar(std::vector<Forge::ASN1::ASNObject::Ptr> vec)
+    {
+        juce::Array<var> arr;
+        for( auto p : vec )
+        {
+            arr.add(p->toVar());
+        }
+        
+        return arr;
+    }
+    
+    static std::vector<Forge::ASN1::ASNObject::Ptr> fromVar(juce::var v)
+    {
+        jassert(v.isArray());
+        
+        std::vector<Forge::ASN1::ASNObject::Ptr> vec;
+        auto* arr = v.getArray();
+        for( auto& v : *arr )
+        {
+            vec.push_back( Forge::ASN1::ASNObject::fromVar(v) );
+        }
+        
+        return vec;
+    }
+};
+} //end namespace juce
+
+
+namespace Forge
+{
+namespace ASN1
+{
 struct Capture : juce::ReferenceCountedObject
 {
     using Ptr = juce::ReferenceCountedObjectPtr<Capture>;
@@ -1816,17 +1860,18 @@ bool validate(ASNType& obj,
                     //Consider adding operator[](juce::String) to the capture class
                     //make it return juce::var
 //                    (*capture)[v.capture] = obj.value;
-                    capture->set(v.capture, obj.objectList);
+                    capture->set(v.capture, juce::VariantConverter<std::vector<Forge::ASN1::ASNObject::Ptr>>::toVar(obj.objectList));
                 }
                 if(v.captureAsn1.length())
                 {
 //                    (*capture)[v.captureAsn1] = obj;
-                    capture->set(v.captureAsn1, obj);
+                    capture->set(v.captureAsn1, obj.toVar());
                 }
 //                if(v.captureBitStringContents && 'bitStringContents' in obj)
                 if( v.captureBitStringContents && ! obj.bitStringContents.isEmpty())
                 {
 //                    (*capture)[v.captureBitStringContents] = obj.bitStringContents;
+                    //TODO: figure out how v.captureBitStringContents is used. 
                     capture->set(v.captureBitStringContents, obj.bitStringContents);
                 }
 //                if(v.captureBitStringValue && 'bitStringContents' in obj)
@@ -1834,7 +1879,7 @@ bool validate(ASNType& obj,
                 {
 //                    var value;
 //                    if(obj.bitStringContents.length < 2)
-                    if( obj.bitStringContents.length() < 2 )
+                    if( obj.bitStringContents.getSize() < 2 )
                     {
 //                        capture[v.captureBitStringValue] = '';
 //                        capture[v.captureBitStringValue] = "";
@@ -2104,28 +2149,4 @@ asn1.prettyPrint = function(obj, level, indentation) {
 };
 #endif
 
-namespace juce
-{
-template<>
-struct VariantConverter<std::vector<Forge::ASN1::ASNObject::Ptr>>
-{
-    static juce::var toVar(std::vector<Forge::ASN1::ASNObject::Ptr> vec)
-    {
-        juce::MemoryBlock block;
-        
-        juce::MemoryOutputStream mos(block, true);
-        for( auto p : vec )
-        {
-            //TODO: write a ASNObject::toVar() function
-            //TODO: write a ASNObject::fromVar() function
-        }
-        
-        return juce::var {block};
-    }
-    
-    static std::vector<Forge::ASN1::ASNObject::Ptr> fromVar(juce::var v)
-    {
-        jassert(v.isBinaryData());
-    }
-};
-}
+
