@@ -1870,20 +1870,27 @@ bool validate(ASNType& obj,
 //                if(v.captureBitStringContents && 'bitStringContents' in obj)
                 if( v.captureBitStringContents && ! obj.bitStringContents.isEmpty())
                 {
+                    //v.captureBitStringContents is not used in encoding <=> decoding public PEM files
+                    jassertfalse;
+                    
 //                    (*capture)[v.captureBitStringContents] = obj.bitStringContents;
-                    //TODO: figure out how v.captureBitStringContents is used. 
-                    capture->set(v.captureBitStringContents, obj.bitStringContents);
+                    //TODO: figure out how v.captureBitStringContents is used.
+//                    capture->set(v.captureBitStringContents, obj.bitStringContents);
                 }
 //                if(v.captureBitStringValue && 'bitStringContents' in obj)
                 if( v.captureBitStringValue && ! obj.bitStringContents.isEmpty())
                 {
+                    //not used in encoding <=> decoding public PEM files
+                    jassertfalse;
 //                    var value;
 //                    if(obj.bitStringContents.length < 2)
                     if( obj.bitStringContents.getSize() < 2 )
                     {
 //                        capture[v.captureBitStringValue] = '';
 //                        capture[v.captureBitStringValue] = "";
-                        capture->set(v.captureBitStringValue, "");
+                        //not used in encoding <=> decoding PEM files
+                        jassertfalse;
+//                        capture->set(v.captureBitStringValue, "");
                     }
                     else
                     {
@@ -1900,12 +1907,15 @@ bool validate(ASNType& obj,
                             return false;
                         }
                         
+                        //not used in encoding <=> decoding public PEM files
                         jassertfalse;
 //                        capture[v.captureBitStringValue] = obj.bitStringContents.slice(1);
                         /*
                         'slice' functions leave the original buffer/string intact without modifying the read index.
                         */
-                        auto& bytes = obj.bitStringContents;
+//                        auto& bytes = obj.bitStringContents;
+                        /*
+                        auto bytes = juce::MemoryInputStream(obj.bitStringContents, true);
                         auto pos = bytes.getPosition();
                         auto bytesToRead = 1;
                         auto bitStringContents = std::make_unique<juce::MemoryBlock>();
@@ -1913,7 +1923,9 @@ bool validate(ASNType& obj,
                         auto numRead = bytes.read(bitStringContents->getData(), bytesToRead);
                         jassert(numRead == bytesToRead);
                         bytes.setPosition(pos);
-                        capture[v.captureBitStringValue] = bitStringContents;
+//                        capture[v.captureBitStringValue] = bitStringContents;
+                        capture->set(v.captureBitStringValue, *bitStringContents);
+                         */
                     }
                 }
             }
@@ -1922,8 +1934,8 @@ bool validate(ASNType& obj,
         {
             errors.push_back(
                         "[" + v.name + "] " +
-                        "Expected constructed \"" + v.constructed + "\", got \"" +
-                        obj.constructed + "\"");
+                        "Expected constructed \"" + juce::String(static_cast<int>(v.constructed)) + "\", got \"" +
+                             juce::String(static_cast<int>(obj.constructed)) + "\"");
         }
     }
     else if(errors.size() > 0)
@@ -1932,14 +1944,14 @@ bool validate(ASNType& obj,
         {
             errors.push_back(
                              "[" + v.name + "] " +
-                        "Expected tag class \"" + v.tagClass + "\", got \"" +
-                        obj.tagClass + "\"");
+                        "Expected tag class \"" + juce::String(static_cast<int>(v.tagClass)) + "\", got \"" +
+                             juce::String(static_cast<int>(obj.tagClass)) + "\"");
         }
         if(obj.type != v.type)
         {
             errors.push_back(
                              "[" + v.name + "] " +
-                             "Expected type \"" + v.type + "\", got \"" + obj.type + "\"");
+                             "Expected type \"" + juce::String(static_cast<int>(v.type)) + "\", got \"" + juce::String(static_cast<int>(obj.type)) + "\"");
         }
     }
     return rval;
