@@ -228,6 +228,21 @@ namespace Forge
 {
 namespace RSA
 {
+/*
+ TODO: use the juce::var class to replace a lot of these named variables
+ why?
+ juce::var has operator[](const Identifier&), which returns a var.
+ 
+ var can store:
+     int
+     int64
+     double
+     bool
+     array<var>
+     memoryBlock
+     String
+     ReferenceCountedObject's 
+ */
 struct Validator : juce::ReferenceCountedObject
 {
     using Ptr = juce::ReferenceCountedObjectPtr<Validator>;
