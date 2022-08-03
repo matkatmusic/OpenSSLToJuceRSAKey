@@ -699,9 +699,9 @@ namespace ASN1
 struct Capture : juce::ReferenceCountedObject
 {
     using Ptr = juce::ReferenceCountedObjectPtr<Capture>;
-    juce::String publicKeyOid;
-    ASNObject::Ptr rsaPublicKey = new ASNObject();
-    ASNObject::Ptr subjectPublicKeyInfo = new ASNObject();
+//    juce::String publicKeyOid;
+//    ASNObject::Ptr rsaPublicKey = new ASNObject();
+//    ASNObject::Ptr subjectPublicKeyInfo = new ASNObject();
     
     const juce::var& operator[](juce::String name)
     {
@@ -720,6 +720,11 @@ struct Capture : juce::ReferenceCountedObject
         }
         
         return ok;
+    }
+    
+    auto get(juce::String name)
+    {
+        return data.getWithDefault(name, {});
     }
 private:
     juce::NamedValueSet data;
@@ -1458,6 +1463,7 @@ namespace ASN1
 {
 //asn1.derToOid = function(bytes) {
 juce::String derToOid(juce::String str);
+juce::String derToOid(const juce::MemoryBlock& b);
 }//end namespace ASN1
 }//end namespace Forge
 #if false
@@ -1860,7 +1866,14 @@ bool validate(ASNType& obj,
                     //Consider adding operator[](juce::String) to the capture class
                     //make it return juce::var
 //                    (*capture)[v.capture] = obj.value;
-                    capture->set(v.capture, juce::VariantConverter<std::vector<Forge::ASN1::ASNObject::Ptr>>::toVar(obj.objectList));
+                    if(! obj.objectList.empty() )
+                    {
+                        capture->set(v.capture, juce::VariantConverter<std::vector<Forge::ASN1::ASNObject::Ptr>>::toVar(obj.objectList));
+                    }
+                    else if(! obj.byteArray.isEmpty() )
+                    {
+                        capture->set(v.capture, obj.byteArray);
+                    }
                 }
                 if(v.captureAsn1.length())
                 {

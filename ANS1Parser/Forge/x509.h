@@ -13,6 +13,9 @@
 #include <JuceHeader.h>
 #include "Pem.h"
 
+#include "ASN1.h"
+#include "PKI.h"
+
 /*
  a port of https://github.com/digitalbazaar/forge/blob/main/lib/x509.js
  */
@@ -892,7 +895,15 @@ template<typename KeyType, typename PemType>
 KeyType publicKeyFromPem(const PemType& pem)
 {
 //    var msg = forge.pem.decode(pem)[0];
-    auto msg = Forge::Pem::decode(pem)[0];
+    auto decoded = Forge::Pem::decode<juce::Array<Forge::Pem::Msg>>(pem);
+    
+    if( std::distance(decoded.begin(), decoded.end()) == 0 )
+    {
+        jassertfalse;
+        return {};
+    }
+    
+    auto msg = decoded[0];
 
 //    if(msg.type !== 'PUBLIC KEY' && msg.type !== 'RSA PUBLIC KEY') {
 //      var error = new Error('Could not convert public key from PEM; PEM header ' +
@@ -916,13 +927,14 @@ KeyType publicKeyFromPem(const PemType& pem)
         return {};
     }
 
-    // convert DER to ASN.1 object
-//    var obj = asn1.fromDer(msg.body);
-//    auto obj = Asn1::fromDer(msg.body);
-
-//    return pki.publicKeyFromAsn1(obj);
-//    return Pki::publicKeyFromAsn1(obj);
-    return {};
+    //             convert DER to ASN.1 object
+    //            var obj = asn1.fromDer(msg.body);
+    auto obj = Forge::ASN1::fromDer<Forge::ASN1::ASNObject>(msg.body);
+    
+    //            return pki.publicKeyFromASN1(obj)
+    auto key = Forge::pki::publicKeyFromASN1(obj);
+    jassert(key.isValid());
+    return key;
 }
 } //end namespace Pki
 } //end namespace Forge

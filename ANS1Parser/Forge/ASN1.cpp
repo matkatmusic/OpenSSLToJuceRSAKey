@@ -23,7 +23,7 @@ void _checkBitsParam(int numBits)
 juce::String derToOid(juce::String str)
 {
 //    var oid;
-    juce::String oid;
+    
     
     // wrap in buffer if needed
 //    if(typeof bytes === 'string')
@@ -32,6 +32,13 @@ juce::String derToOid(juce::String str)
 //    }
     auto stdString = str.toStdString();
     auto block = juce::MemoryBlock(stdString.data(), stdString.length());
+    
+    return derToOid(block);
+}
+
+juce::String derToOid(const juce::MemoryBlock& block)
+{
+    juce::String oid;
     auto bytes = juce::MemoryInputStream(block, false);
     
     // first byte is 40 * value1 + value2

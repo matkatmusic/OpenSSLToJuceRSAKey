@@ -1530,7 +1530,21 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
     {
         // get oid
 //        var oid = asn1.derToOid(capture.publicKeyOid);
-        auto oid = Forge::ASN1::derToOid(capture->publicKeyOid);
+        auto data = capture->get("publicKeyOid");
+        jassert(data != juce::var() );
+        jassert(data.isArray());
+        if(! data.isArray() )
+        {
+            jassertfalse;
+            return {};
+        }
+        
+        auto oidPtr = Forge::ASN1::ASNObject::fromVar(data);
+        
+        
+//        auto block = oidPtr->byteArray;
+        jassert(! oidPtr->byteArray.isEmpty() );
+        auto oid = Forge::ASN1::derToOid(oidPtr->byteArray);
 //        if(oid !== pki.oids.rsaEncryption)
         const auto& oids = Forge::Pki::oids();
         if( oids.find(oid) == oids.end() )
@@ -1542,7 +1556,15 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
             jassertfalse;
             return {}; //returns an invalid key
         }
-        obj = capture->rsaPublicKey;
+        data = capture->get("rsaPublicKey");
+        jassert(data != juce::var() );
+        jassert(data.isArray());
+        if(! data.isArray() )
+        {
+            jassertfalse;
+            return {};
+        }
+        obj = Forge::ASN1::ASNObject::fromVar(data);
     }
     
     // get RSA params
@@ -1571,8 +1593,27 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
 //                               new BigInteger(n, 16),
 //                               new BigInteger(e, 16));
     juce::BigInteger n, e;
-    n.loadFromMemoryBlock( capture->rsaPublicKey->byteArray );
-    e.loadFromMemoryBlock(capture->subjectPublicKeyInfo->byteArray);
+    auto data = capture->get("publicKeyModulus");
+    jassert(data != juce::var() );
+    jassert(data.isBinaryData());
+    if(! data.isBinaryData() )
+    {
+        jassertfalse;
+        return {};
+    }
+//    obj = Forge::ASN1::ASNObject::fromVar(data);
+    n.loadFromMemoryBlock( *data.getBinaryData() );
+    
+    data = capture->get("publicKeyExponent");
+    jassert(data != juce::var() );
+    jassert(data.isBinaryData());
+    if(! data.isBinaryData() )
+    {
+        jassertfalse;
+        return {};
+    }
+//    obj = Forge::ASN1::ASNObject::fromVar(data);
+    e.loadFromMemoryBlock(*data.getBinaryData());
     auto key = juce::RSAKey(n.toString(16) + "," + e.toString(16));
     if(key.isValid())
         return key;
