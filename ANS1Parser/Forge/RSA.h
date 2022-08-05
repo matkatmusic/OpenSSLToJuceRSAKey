@@ -1546,7 +1546,7 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
         jassert(! oidPtr->byteArray.isEmpty() );
         auto oid = Forge::ASN1::derToOid(oidPtr->byteArray);
 //        if(oid !== pki.oids.rsaEncryption)
-        const auto& oids = Forge::Pki::oids();
+        const auto& oids = Forge::PKI::oids();
         if( oids.find(oid) == oids.end() )
         {
 //            var error = new Error('Cannot read public key. Unknown OID.');
@@ -1630,8 +1630,18 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
  *
  * @return the asn1 representation of a SubjectPublicKeyInfo.
  */
-pki.publicKeyToAsn1 = pki.publicKeyToSubjectPublicKeyInfo = function(key) {
+#endif
+namespace Forge
+{
+namespace PKI
+{
+//pki.publicKeyToAsn1 = pki.publicKeyToSubjectPublicKeyInfo = function(key) {
   // SubjectPublicKeyInfo
+template<typename ASNType, typename KeyType>
+ASNType publicKeyToAsn1(KeyType key)
+{
+#if false
+    // SubjectPublicKeyInfo
   return asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
     // AlgorithmIdentifier
     asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
@@ -1646,7 +1656,93 @@ pki.publicKeyToAsn1 = pki.publicKeyToSubjectPublicKeyInfo = function(key) {
       pki.publicKeyToRSAPublicKey(key)
     ])
   ]);
+#endif
+/*
+ build up this ASN from the inside out:
+ algorithm
+ parameters
+ 
+ AlgorithmIdentifier
+    use objectList { algorithm, parameters }
+ 
+ publicKeyToRSAPublicKey might be a byte array or ASNObject, but it is stuck inside the objectList of subjectPublicKey
+ 
+ SubjectPublicKeyInfo
+    use objectList { AlgorithmIdentifier, subjectPublicKey }
+ 
+ */
+    // parameters (null)
+//    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.NULL, false, '')
+    auto parameters = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+                                                    ASN1::Type::NULL_,
+                                                    false, //not constructed
+                                                    {}, //no object list
+                                                    {}, //no byte array
+                                                    {}); //no parse options
+    
+    // algorithm
+//    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OID, false,
+//      asn1.oidToDer(pki.oids.rsaEncryption).getBytes()),
+    const auto& oids = PKI::oids();
+    auto oid = [&]()
+    {
+        for( auto [k, o] : oids )
+        {
+            if( o == "rsaEncryption" )
+            {
+                return k; //return the long version ID code xxxxxx.xx.xxxx.xx.xx.x.x
+            }
+        }
+    }();
+    
+    if( oid.isEmpty() )
+    {
+        jassertfalse;
+        return {};
+    }
+    
+    auto algorithmOIDasDerByteArray =  ASN1::oidToDer(oid);
+    auto algorithm = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+                                                   ASN1::Type::OID,
+                                                   false, //not constructed
+                                                   {}, //no object list
+                                                   algorithmOIDasDerByteArray,
+                                                   {}); //no parse options
+    
+    // AlgorithmIdentifier
+//    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [algorithm, parameters])
+    auto AlgorithmIdentifier = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+                                                             ASN1::Type::SEQUENCE,
+                                                             true,
+                                                             {algorithm, parameters},
+                                                             {}, //no object list
+                                                             {}); //no parse options
+    
+    // subjectPublicKey
+//    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.BITSTRING, false, [
+//      pki.publicKeyToRSAPublicKey(key)
+    auto subjectPublicKey = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+                                                          ASN1::Type::BITSTRING,
+                                                          false,
+                                                          {publicKeyToRSAPublicKey(key)},
+                                                          {}, //no byte array,
+                                                          {}); //no parse options
+    
+    // SubjectPublicKeyInfo
+//  return asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+//    etc...
+//    SubjectPublicKeyInfo
+//       use objectList { AlgorithmIdentifier, subjectPublicKey }
+    auto SubjectPublicKeyInfo = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+                                                              ASN1::Type::SEQUENCE,
+                                                              true,
+                                                              {AlgorithmIdentifier, subjectPublicKey},
+                                                              {},   //no byte array
+                                                              {});  //no parse options
+    
+    return SubjectPublicKeyInfo;
 };
+
 
 /**
  * Converts a public key to an ASN.1 RSAPublicKey.
@@ -1655,7 +1751,11 @@ pki.publicKeyToAsn1 = pki.publicKeyToSubjectPublicKeyInfo = function(key) {
  *
  * @return the asn1 representation of a RSAPublicKey.
  */
-pki.publicKeyToRSAPublicKey = function(key) {
+//pki.publicKeyToRSAPublicKey = function(key) {
+template<typename KeyType>
+ASN1::ASNObject::Ptr publicKeyToRSAPublicKey(KeyType key)
+{
+#if false
   // RSAPublicKey
   return asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
     // modulus (n)
@@ -1665,8 +1765,31 @@ pki.publicKeyToRSAPublicKey = function(key) {
     asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
       _bnToBytes(key.e))
   ]);
+#endif
+    auto modulus = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+                                                 ASN1::Type::INTEGER,
+                                                 false,
+                                                 {},    //no object list
+                                                 key.getPart1().toMemoryBlock(),
+                                                 {});   //no options
+    auto exponent = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+                                                  ASN1::Type::INTEGER,
+                                                  false,
+                                                  {},   //no object list
+                                                  key.getPart2().toMemoryBlock(),
+                                                  {});  //no options
+    auto rsaPublicKey = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+                                                      ASN1::Type::SEQUENCE,
+                                                      true,
+                                                      {modulus, exponent},
+                                                      {},   //no byte array
+                                                      {}); //no parse options
+    
+    return rsaPublicKey;
 };
-
+} //end namespace PKI
+} //end namespace Forge
+#if false
 /**
  * Encodes a message using PKCS#1 v1.5 padding.
  *

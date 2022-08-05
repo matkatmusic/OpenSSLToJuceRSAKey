@@ -15,6 +15,7 @@
 
 #include "ASN1.h"
 #include "PKI.h"
+#include "RSA.h"
 
 /*
  a port of https://github.com/digitalbazaar/forge/blob/main/lib/x509.js
@@ -889,7 +890,7 @@ pki.publicKeyFromPem = function(pem) {
 #endif
 namespace Forge
 {
-namespace Pki
+namespace PKI
 {
 template<typename KeyType, typename PemType>
 KeyType publicKeyFromPem(const PemType& pem)
@@ -932,11 +933,11 @@ KeyType publicKeyFromPem(const PemType& pem)
     auto obj = Forge::ASN1::fromDer<Forge::ASN1::ASNObject>(msg.body);
     
     //            return pki.publicKeyFromASN1(obj)
-    auto key = Forge::pki::publicKeyFromASN1(obj);
+    auto key = Forge::PKI::publicKeyFromASN1(obj);
     jassert(key.isValid());
     return key;
 }
-} //end namespace Pki
+} //end namespace PKI
 } //end namespace Forge
 
 #if false
@@ -948,15 +949,32 @@ KeyType publicKeyFromPem(const PemType& pem)
  *
  * @return the PEM-formatted public key.
  */
-pki.publicKeyToPem = function(key, maxline) {
+#endif
+namespace Forge
+{
+namespace PKI
+{
+//pki.publicKeyToPem = function(key, maxline) {
+template<typename KeyType, typename PEMType>
+PEMType publicKeyToPem(const KeyType& key, int maxLine = 64)
+{
   // convert to ASN.1, then DER, then PEM-encode
-  var msg = {
-    type: 'PUBLIC KEY',
-    body: asn1.toDer(pki.publicKeyToAsn1(key)).getBytes()
-  };
-  return forge.pem.encode(msg, {maxline: maxline});
+//  var msg = {
+//    type: 'PUBLIC KEY',
+//    body: asn1.toDer(pki.publicKeyToAsn1(key)).getBytes()
+//  };
+    juce::NamedValueSet msg;
+    msg.set("type", "PUBLIC KEY");
+    auto asn1 = Forge::PKI::publicKeyToAsn1(key);
+    auto der = Forge::ASN1::toDer(asn1);
+    msg.set("body", der->byteArray);
+    auto pem = Forge::PEM::encode(msg, maxLine);
+    return pem;
+//  return forge.pem.encode(msg, {maxline: maxline});
 };
-
+} //end namespace PKI
+}//end namespace Forge
+#if false
 /**
  * Converts an RSA public key to PEM format (using an RSAPublicKey).
  *

@@ -1297,7 +1297,11 @@ function _fromDer(bytes, remaining, depth, options) {
   // create and return asn1 object
   return asn1.create(tagClass, type, constructed, value, asn1Options);
 }
-
+#endif
+namespace Forge
+{
+namespace ASN1
+{
 /**
  * Converts the given asn1 object to a buffer of bytes in DER format.
  *
@@ -1305,104 +1309,132 @@ function _fromDer(bytes, remaining, depth, options) {
  *
  * @return the buffer of bytes.
  */
-asn1.toDer = function(obj) {
-  var bytes = forge.util.createBuffer();
-
-  // build the first byte
-  var b1 = obj.tagClass | obj.type;
-
-  // for storing the ASN.1 value
-  var value = forge.util.createBuffer();
-
-  // use BIT STRING contents if available and data not changed
-  var useBitStringContents = false;
-  if('bitStringContents' in obj) {
-    useBitStringContents = true;
-    if(obj.original) {
-      useBitStringContents = asn1.equals(obj, obj.original);
+//asn1.toDer = function(obj) {
+template<typename ASNType>
+juce::MemoryBlock toDer(ASNType obj)
+{
+//    var bytes = forge.util.createBuffer();
+    auto bytes = juce::MemoryBlock();
+    
+    // build the first byte
+//    var b1 = obj.tagClass | obj.type;
+    char b1 = static_cast<char>(obj->tagClass) | static_cast<char>(obj->type);
+    
+    // for storing the ASN.1 value
+//    var value = forge.util.createBuffer();
+    auto value = juce::MemoryBlock();
+    
+    // use BIT STRING contents if available and data not changed
+    var useBitStringContents = false;
+    if('bitStringContents' in obj)
+    {
+        useBitStringContents = true;
+        if(obj.original)
+        {
+            useBitStringContents = asn1.equals(obj, obj.original);
+        }
     }
-  }
-
-  if(useBitStringContents) {
-    value.putBytes(obj.bitStringContents);
-  } else if(obj.composed) {
-    // if composed, use each child asn1 object's DER bytes as value
-    // turn on 6th bit (0x20 = 32) to indicate asn1 is constructed
-    // from other asn1 objects
-    if(obj.constructed) {
-      b1 |= 0x20;
-    } else {
-      // type is a bit string, add unused bits of 0x00
-      value.putByte(0x00);
+    
+    if(useBitStringContents)
+    {
+        value.putBytes(obj.bitStringContents);
     }
-
-    // add all of the child DER bytes together
-    for(var i = 0; i < obj.value.length; ++i) {
-      if(obj.value[i] !== undefined) {
-        value.putBuffer(asn1.toDer(obj.value[i]));
-      }
+    else if(obj.composed)
+    {
+        // if composed, use each child asn1 object's DER bytes as value
+        // turn on 6th bit (0x20 = 32) to indicate asn1 is constructed
+        // from other asn1 objects
+        if(obj.constructed)
+        {
+            b1 |= 0x20;
+        }
+        else
+        {
+            // type is a bit string, add unused bits of 0x00
+            value.putByte(0x00);
+        }
+        
+        // add all of the child DER bytes together
+        for(var i = 0; i < obj.value.length; ++i)
+        {
+            if(obj.value[i] !== undefined)
+            {
+                value.putBuffer(asn1.toDer(obj.value[i]));
+            }
+        }
     }
-  } else {
-    // use asn1.value directly
-    if(obj.type === asn1.Type.BMPSTRING) {
-      for(var i = 0; i < obj.value.length; ++i) {
-        value.putInt16(obj.value.charCodeAt(i));
-      }
-    } else {
-      // ensure integer is minimally-encoded
-      // TODO: should all leading bytes be stripped vs just one?
-      // .. ex '00 00 01' => '01'?
-      if(obj.type === asn1.Type.INTEGER &&
-        obj.value.length > 1 &&
-        // leading 0x00 for positive integer
-        ((obj.value.charCodeAt(0) === 0 &&
-        (obj.value.charCodeAt(1) & 0x80) === 0) ||
-        // leading 0xFF for negative integer
-        (obj.value.charCodeAt(0) === 0xFF &&
-        (obj.value.charCodeAt(1) & 0x80) === 0x80))) {
-        value.putBytes(obj.value.substr(1));
-      } else {
-        value.putBytes(obj.value);
-      }
+    else
+    {
+        // use asn1.value directly
+        if(obj.type === asn1.Type.BMPSTRING)
+        {
+            for(var i = 0; i < obj.value.length; ++i)
+            {
+                value.putInt16(obj.value.charCodeAt(i));
+            }
+        }
+        else
+        {
+            // ensure integer is minimally-encoded
+            // TODO: should all leading bytes be stripped vs just one?
+            // .. ex '00 00 01' => '01'?
+            if(obj.type === asn1.Type.INTEGER &&
+               obj.value.length > 1 &&
+               // leading 0x00 for positive integer
+               ((obj.value.charCodeAt(0) === 0 &&
+                 (obj.value.charCodeAt(1) & 0x80) === 0) ||
+                // leading 0xFF for negative integer
+                (obj.value.charCodeAt(0) === 0xFF &&
+                 (obj.value.charCodeAt(1) & 0x80) === 0x80)))
+            {
+                value.putBytes(obj.value.substr(1));
+            } else
+            {
+                value.putBytes(obj.value);
+            }
+        }
     }
-  }
-
-  // add tag byte
-  bytes.putByte(b1);
-
-  // use "short form" encoding
-  if(value.length() <= 127) {
-    // one byte describes the length
-    // bit 8 = 0 and bits 7-1 = length
-    bytes.putByte(value.length() & 0x7F);
-  } else {
-    // use "long form" encoding
-    // 2 to 127 bytes describe the length
-    // first byte: bit 8 = 1 and bits 7-1 = # of additional bytes
-    // other bytes: length in base 256, big-endian
-    var len = value.length();
-    var lenBytes = '';
-    do {
-      lenBytes += String.fromCharCode(len & 0xFF);
-      len = len >>> 8;
-    } while(len > 0);
-
-    // set first byte to # bytes used to store the length and turn on
-    // bit 8 to indicate long-form length is used
-    bytes.putByte(lenBytes.length | 0x80);
-
-    // concatenate length bytes in reverse since they were generated
-    // little endian and we need big endian
-    for(var i = lenBytes.length - 1; i >= 0; --i) {
-      bytes.putByte(lenBytes.charCodeAt(i));
+    
+    // add tag byte
+    bytes.putByte(b1);
+    
+    // use "short form" encoding
+    if(value.length() <= 127)
+    {
+        // one byte describes the length
+        // bit 8 = 0 and bits 7-1 = length
+        bytes.putByte(value.length() & 0x7F);
     }
-  }
-
-  // concatenate value bytes
-  bytes.putBuffer(value);
-  return bytes;
+    else
+    {
+        // use "long form" encoding
+        // 2 to 127 bytes describe the length
+        // first byte: bit 8 = 1 and bits 7-1 = # of additional bytes
+        // other bytes: length in base 256, big-endian
+        var len = value.length();
+        var lenBytes = '';
+        do
+        {
+            lenBytes += String.fromCharCode(len & 0xFF);
+            len = len >>> 8;
+        } while(len > 0);
+        
+        // set first byte to # bytes used to store the length and turn on
+        // bit 8 to indicate long-form length is used
+        bytes.putByte(lenBytes.length | 0x80);
+        
+        // concatenate length bytes in reverse since they were generated
+        // little endian and we need big endian
+        for(var i = lenBytes.length - 1; i >= 0; --i)
+        {
+            bytes.putByte(lenBytes.charCodeAt(i));
+        }
+    }
+    
+    // concatenate value bytes
+    bytes.putBuffer(value);
+    return bytes;
 };
-
 /**
  * Converts an OID dot-separated string to a byte buffer. The byte buffer
  * contains only the DER-encoded value, not any tag or length bytes.
@@ -1411,42 +1443,66 @@ asn1.toDer = function(obj) {
  *
  * @return the byte buffer.
  */
-asn1.oidToDer = function(oid) {
-  // split OID into individual values
-  var values = oid.split('.');
-  var bytes = forge.util.createBuffer();
-
-  // first byte is 40 * value1 + value2
-  bytes.putByte(40 * parseInt(values[0], 10) + parseInt(values[1], 10));
-  // other bytes are each value in base 128 with 8th bit set except for
-  // the last byte for each value
-  var last, valueBytes, value, b;
-  for(var i = 2; i < values.length; ++i) {
-    // produce value bytes in reverse because we don't know how many
-    // bytes it will take to store the value
-    last = true;
-    valueBytes = [];
-    value = parseInt(values[i], 10);
-    do {
-      b = value & 0x7F;
-      value = value >>> 7;
-      // if value is not last, then turn on 8th bit
-      if(!last) {
-        b |= 0x80;
-      }
-      valueBytes.push(b);
-      last = false;
-    } while(value > 0);
-
-    // add value bytes in reverse (needs to be in big endian)
-    for(var n = valueBytes.length - 1; n >= 0; --n) {
-      bytes.putByte(valueBytes[n]);
+juce::MemoryBlock oidToDer(juce::String oid)
+{
+//asn1.oidToDer = function(oid) {
+    // split OID into individual values
+//    var values = oid.split('.');
+    auto values = juce::StringArray::fromTokens(oid, ".", "");
+//    var bytes = forge.util.createBuffer();
+    auto block = juce::MemoryBlock();
+    auto bytes = juce::MemoryOutputStream(block, false);
+    // first byte is 40 * value1 + value2
+//    bytes.putByte(40 * parseInt(values[0], 10) + parseInt(values[1], 10));
+    bytes.writeByte(40 + values[0].getIntValue() + values[1].getIntValue());
+    // other bytes are each value in base 128 with 8th bit set except for
+    // the last byte for each value
+//    var last, valueBytes, value, b;
+    bool last;
+    std::vector<char> valueBytes;
+    unsigned int value;
+    int b;
+    
+//    for(var i = 2; i < values.length; ++i)
+    for( int i = 2; i < values.size(); ++i )
+    {
+        // produce value bytes in reverse because we don't know how many
+        // bytes it will take to store the value
+        last = true;
+//        valueBytes = [];
+        valueBytes.clear();
+//        value = parseInt(values[i], 10);
+        value = values[i].getIntValue();
+        
+        do
+        {
+            b = value & 0x7F;
+//            value = value >>> 7; //this is javascript unsigned shift right
+            value = value >> 7;
+            // if value is not last, then turn on 8th bit
+            if(!last)
+            {
+                b |= 0x80;
+            }
+//            valueBytes.push(b);
+            valueBytes.push_back(b);
+            last = false;
+        } while(value > 0);
+        
+        // add value bytes in reverse (needs to be in big endian)
+//        for(var n = valueBytes.length - 1; n >= 0; --n)
+        for( size_t n = valueBytes.size() - 1; n >= 0; --n )
+        {
+//            bytes.putByte(valueBytes[n]);
+            bytes.writeByte(valueBytes[n]);
+        }
     }
-  }
 
-  return bytes;
+    return block;
 };
-
+}//end namespace ASN1
+}//end namespace Forge
+#if false
 /**
  * Converts a DER-encoded byte buffer to an OID dot-separated string. The
  * byte buffer should contain only the DER-encoded value, not any tag or
