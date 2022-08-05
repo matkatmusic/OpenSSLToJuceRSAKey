@@ -921,7 +921,10 @@ KeyType publicKeyFromPem(const PemType& pem)
 //    if(msg.procType && msg.procType.type === 'ENCRYPTED') {
 //      throw new Error('Could not convert public key from PEM; PEM is encrypted.');
 //    }
-    if( msg.procType != nullptr && msg.procType->type == "ENCRYPTED" )
+//    if( msg.procType != nullptr && msg.procType->type == "ENCRYPTED" )
+    if( msg.values.contains("procType") &&
+       msg.values.getVarPointer("procType")->isString() &&
+       msg.values.getVarPointer("procType")->toString() == "ENCRYPTED" )
     {
         DBG( "Could not convert public key from PEM; PEM is encrypted." );
         jassertfalse;
@@ -933,7 +936,8 @@ KeyType publicKeyFromPem(const PemType& pem)
     auto obj = Forge::ASN1::fromDer<Forge::ASN1::ASNObject>(msg.body);
     
     //            return pki.publicKeyFromASN1(obj)
-    auto key = Forge::PKI::publicKeyFromASN1(obj);
+//    auto key = Forge::PKI::publicKeyFromASN1(obj);
+    auto key = Forge::PKI::publicKeyFromASN1<KeyType>(obj);
     jassert(key.isValid());
     return key;
 }
@@ -955,7 +959,7 @@ namespace Forge
 namespace PKI
 {
 //pki.publicKeyToPem = function(key, maxline) {
-template<typename KeyType, typename PEMType>
+template<typename PEMType, typename KeyType>
 PEMType publicKeyToPem(const KeyType& key, int maxLine = 64)
 {
   // convert to ASN.1, then DER, then PEM-encode
@@ -965,10 +969,13 @@ PEMType publicKeyToPem(const KeyType& key, int maxLine = 64)
 //  };
     juce::NamedValueSet msg;
     msg.set("type", "PUBLIC KEY");
-    auto asn1 = Forge::PKI::publicKeyToAsn1(key);
-    auto der = Forge::ASN1::toDer(asn1);
-    msg.set("body", der->byteArray);
-    auto pem = Forge::PEM::encode(msg, maxLine);
+//    auto asn1 = Forge::PKI::publicKeyToAsn1(key);
+    auto asn1 = Forge::PKI::publicKeyToAsn1<ASN1::ASNObject::Ptr>(key);
+    auto derMemBlock = Forge::ASN1::toDer(asn1);
+    msg.set("body", derMemBlock);
+    using NV = juce::NamedValueSet::NamedValue;
+    auto options = juce::NamedValueSet({NV("maxLine", maxLine)});
+    auto pem = Forge::PEM::encode(msg, options);
     return pem;
 //  return forge.pem.encode(msg, {maxline: maxline});
 };

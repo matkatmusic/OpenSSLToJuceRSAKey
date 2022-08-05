@@ -1314,7 +1314,8 @@ template<typename ASNType>
 juce::MemoryBlock toDer(ASNType obj)
 {
 //    var bytes = forge.util.createBuffer();
-    auto bytes = juce::MemoryBlock();
+    auto bytesBlock = juce::MemoryBlock();
+    auto bytes = juce::MemoryOutputStream(bytesBlock, false);
     
     // build the first byte
 //    var b1 = obj.tagClass | obj.type;
@@ -1322,55 +1323,72 @@ juce::MemoryBlock toDer(ASNType obj)
     
     // for storing the ASN.1 value
 //    var value = forge.util.createBuffer();
-    auto value = juce::MemoryBlock();
+    auto valueBlock = juce::MemoryBlock();
+    auto value = juce::MemoryOutputStream(valueBlock, false);
     
     // use BIT STRING contents if available and data not changed
-    var useBitStringContents = false;
-    if('bitStringContents' in obj)
+//    var useBitStringContents = false;
+    bool useBitStringContents = false;
+//    if('bitStringContents' in obj)
+    if(!obj->bitStringContents.isEmpty())
     {
         useBitStringContents = true;
-        if(obj.original)
-        {
-            useBitStringContents = asn1.equals(obj, obj.original);
-        }
+        //TODO: I'm not even storing 'original' in obj
+//        if(obj.original)
+//        {
+//            useBitStringContents = asn1.equals(obj, obj.original);
+//        }
     }
     
     if(useBitStringContents)
     {
-        value.putBytes(obj.bitStringContents);
+//        value.putBytes(obj.bitStringContents);
+        juce::MemoryInputStream mis(obj->bitStringContents, false);
+        value.writeFromInputStream(mis, obj->bitStringContents.getSize());
     }
-    else if(obj.composed)
+    else if(obj->composed)
     {
         // if composed, use each child asn1 object's DER bytes as value
         // turn on 6th bit (0x20 = 32) to indicate asn1 is constructed
         // from other asn1 objects
-        if(obj.constructed)
+        if(obj->constructed)
         {
             b1 |= 0x20;
         }
         else
         {
             // type is a bit string, add unused bits of 0x00
-            value.putByte(0x00);
+//            value.putByte(0x00);
+            value.writeByte(0x00);
         }
         
         // add all of the child DER bytes together
-        for(var i = 0; i < obj.value.length; ++i)
+//        for(var i = 0; i < obj.value.length; ++i)
+        for( size_t i = 0; i < obj->objectList.size(); ++i )
         {
-            if(obj.value[i] !== undefined)
+//            if(obj.value[i] !== undefined)
+            if( obj->objectList[i] != nullptr )
             {
-                value.putBuffer(asn1.toDer(obj.value[i]));
+//                value.putBuffer(asn1.toDer(obj.value[i]));
+                auto memoryBlockToAdd = ASN1::toDer(obj->objectList[i]);
+                auto mis = juce::MemoryInputStream(memoryBlockToAdd, false);
+                value.writeFromInputStream(mis,
+                                           mis.getNumBytesRemaining());
             }
         }
     }
     else
     {
         // use asn1.value directly
-        if(obj.type === asn1.Type.BMPSTRING)
+//        if(obj.type === asn1.Type.BMPSTRING)
+        if( obj->type == ASN1::Type::BMPSTRING)
         {
-            for(var i = 0; i < obj.value.length; ++i)
+//            for(var i = 0; i < obj.value.length; ++i)
+            for( size_t i = 0; i < obj->byteArray.getSize(); ++i )
             {
-                value.putInt16(obj.value.charCodeAt(i));
+//                value.putInt16(obj.value.charCodeAt(i));
+                auto v = obj->byteArray[i];
+                value.writeShort(v);
             }
         }
         else
@@ -1378,32 +1396,50 @@ juce::MemoryBlock toDer(ASNType obj)
             // ensure integer is minimally-encoded
             // TODO: should all leading bytes be stripped vs just one?
             // .. ex '00 00 01' => '01'?
-            if(obj.type === asn1.Type.INTEGER &&
-               obj.value.length > 1 &&
+//            if(obj.type === asn1.Type.INTEGER &&
+            if( obj->type == ASN1::Type::INTEGER &&
+//               obj.value.length > 1 &&
+               obj->byteArray.getSize() > 1 &&
                // leading 0x00 for positive integer
-               ((obj.value.charCodeAt(0) === 0 &&
-                 (obj.value.charCodeAt(1) & 0x80) === 0) ||
+//               ((obj.value.charCodeAt(0) === 0 &&
+               ((obj->byteArray[0] == 0 &&
+//                 (obj.value.charCodeAt(1) & 0x80) === 0) ||
+                 (obj->byteArray[1] & 0x80) == 0) ||
                 // leading 0xFF for negative integer
-                (obj.value.charCodeAt(0) === 0xFF &&
-                 (obj.value.charCodeAt(1) & 0x80) === 0x80)))
+//                (obj.value.charCodeAt(0) === 0xFF &&
+                (obj->byteArray[0] == 0xFF &&
+//                 (obj.value.charCodeAt(1) & 0x80) === 0x80)))
+                 (obj->byteArray[1] & 0x80) == 0x80)))
             {
-                value.putBytes(obj.value.substr(1));
-            } else
+                //read all of byteArray starting at [i]
+//                value.putBytes(obj.value.substr(1));
+                juce::MemoryInputStream mis(obj->byteArray, false);
+                mis.readByte();
+                value.writeFromInputStream(mis, mis.getNumBytesRemaining());
+            }
+            else
             {
-                value.putBytes(obj.value);
+                //copy the whole thing
+//                value.putBytes(obj.value);
+                juce::MemoryInputStream mis(obj->byteArray, false);
+                value.writeFromInputStream(mis, mis.getNumBytesRemaining());
             }
         }
     }
     
     // add tag byte
-    bytes.putByte(b1);
+//    bytes.putByte(b1);
+    bytes.writeByte(b1);
     
     // use "short form" encoding
-    if(value.length() <= 127)
+    value.flush(); //this trims the size of valueBlock to the length of data actually written to valueBlock.  see documentation tooltip
+//    if(value.length() <= 127)
+    if( valueBlock.getSize() <= 127 )
     {
         // one byte describes the length
         // bit 8 = 0 and bits 7-1 = length
-        bytes.putByte(value.length() & 0x7F);
+//        bytes.putByte(value.length() & 0x7F);
+        bytes.writeByte(valueBlock.getSize() & 0x7F);
     }
     else
     {
@@ -1411,29 +1447,57 @@ juce::MemoryBlock toDer(ASNType obj)
         // 2 to 127 bytes describe the length
         // first byte: bit 8 = 1 and bits 7-1 = # of additional bytes
         // other bytes: length in base 256, big-endian
-        var len = value.length();
-        var lenBytes = '';
+//        var len = value.length();
+        auto len = valueBlock.getSize();
+        /*
+         NOTE: Juce doesn't support memoryBlocks with a size that requires more than 8 bytes to represent.
+         The JS code below is strange
+         It appears to create a string from the length bytes in big-endian
+         */
+//        var lenBytes = '';
+        juce::String lenBytes;
         do
         {
-            lenBytes += String.fromCharCode(len & 0xFF);
-            len = len >>> 8;
-        } while(len > 0);
+//            lenBytes += String.fromCharCode(len & 0xFF);
+            /*
+             The static String.fromCharCode() method returns a string created from the specified sequence of UTF-16 code units.
+             */
+//            lenBytes += juce::String(len & 0xFF);
+            char utf8uffer = len & 0xFF;
+            lenBytes += *(juce::String::fromUTF8(&utf8uffer).toUTF16());
+//            len = len >>> 8;
+            len = len >> 8;
+        }
+        while(len > 0);
         
         // set first byte to # bytes used to store the length and turn on
         // bit 8 to indicate long-form length is used
-        bytes.putByte(lenBytes.length | 0x80);
+//        bytes.putByte(lenBytes.length | 0x80);
+        bytes.writeByte(lenBytes.length() | 0x80);
         
         // concatenate length bytes in reverse since they were generated
         // little endian and we need big endian
-        for(var i = lenBytes.length - 1; i >= 0; --i)
+//        for(var i = lenBytes.length - 1; i >= 0; --i)
+        for( int i = lenBytes.length() - 1; i >= 0; --i)
         {
-            bytes.putByte(lenBytes.charCodeAt(i));
+            /*
+             String.prototype.charCodeAt()
+             The charCodeAt() method returns an integer between 0 and 65535 representing the UTF-16 code unit at the given index.
+             putByte writes 1 byte, but UTF16 requires 2 bytes.
+             this is strange.
+             */
+            juce::uint16 charCode = *(lenBytes.substring(i, 1).toUTF16());
+//            bytes.putByte(lenBytes.charCodeAt(i));
+            bytes.writeByte(charCode);
         }
     }
     
     // concatenate value bytes
-    bytes.putBuffer(value);
-    return bytes;
+//    bytes.putBuffer(value);
+    juce::MemoryInputStream mis(valueBlock, false);
+    bytes.writeFromInputStream(mis, mis.getNumBytesRemaining());
+    bytes.flush();
+    return bytesBlock;
 };
 /**
  * Converts an OID dot-separated string to a byte buffer. The byte buffer
@@ -1443,63 +1507,7 @@ juce::MemoryBlock toDer(ASNType obj)
  *
  * @return the byte buffer.
  */
-juce::MemoryBlock oidToDer(juce::String oid)
-{
-//asn1.oidToDer = function(oid) {
-    // split OID into individual values
-//    var values = oid.split('.');
-    auto values = juce::StringArray::fromTokens(oid, ".", "");
-//    var bytes = forge.util.createBuffer();
-    auto block = juce::MemoryBlock();
-    auto bytes = juce::MemoryOutputStream(block, false);
-    // first byte is 40 * value1 + value2
-//    bytes.putByte(40 * parseInt(values[0], 10) + parseInt(values[1], 10));
-    bytes.writeByte(40 + values[0].getIntValue() + values[1].getIntValue());
-    // other bytes are each value in base 128 with 8th bit set except for
-    // the last byte for each value
-//    var last, valueBytes, value, b;
-    bool last;
-    std::vector<char> valueBytes;
-    unsigned int value;
-    int b;
-    
-//    for(var i = 2; i < values.length; ++i)
-    for( int i = 2; i < values.size(); ++i )
-    {
-        // produce value bytes in reverse because we don't know how many
-        // bytes it will take to store the value
-        last = true;
-//        valueBytes = [];
-        valueBytes.clear();
-//        value = parseInt(values[i], 10);
-        value = values[i].getIntValue();
-        
-        do
-        {
-            b = value & 0x7F;
-//            value = value >>> 7; //this is javascript unsigned shift right
-            value = value >> 7;
-            // if value is not last, then turn on 8th bit
-            if(!last)
-            {
-                b |= 0x80;
-            }
-//            valueBytes.push(b);
-            valueBytes.push_back(b);
-            last = false;
-        } while(value > 0);
-        
-        // add value bytes in reverse (needs to be in big endian)
-//        for(var n = valueBytes.length - 1; n >= 0; --n)
-        for( size_t n = valueBytes.size() - 1; n >= 0; --n )
-        {
-//            bytes.putByte(valueBytes[n]);
-            bytes.writeByte(valueBytes[n]);
-        }
-    }
-
-    return block;
-};
+juce::MemoryBlock oidToDer(juce::String oid);
 }//end namespace ASN1
 }//end namespace Forge
 #if false

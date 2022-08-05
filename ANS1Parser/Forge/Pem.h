@@ -50,6 +50,11 @@ require('./util');
 // shortcut for pem API
 var pem = module.exports = forge.pem = forge.pem || {};
 
+#endif
+namespace Forge
+{
+namespace PEM
+{
 /**
  * Encodes (serializes) the given PEM object.
  *
@@ -59,50 +64,10 @@ var pem = module.exports = forge.pem = forge.pem || {};
  *
  * @return the PEM-formatted string.
  */
-pem.encode = function(msg, options) {
-  options = options || {};
-  var rval = '-----BEGIN ' + msg.type + '-----\r\n';
-
-  // encode special headers
-  var header;
-  if(msg.procType) {
-    header = {
-      name: 'Proc-Type',
-      values: [String(msg.procType.version), msg.procType.type]
-    };
-    rval += foldHeader(header);
-  }
-  if(msg.contentDomain) {
-    header = {name: 'Content-Domain', values: [msg.contentDomain]};
-    rval += foldHeader(header);
-  }
-  if(msg.dekInfo) {
-    header = {name: 'DEK-Info', values: [msg.dekInfo.algorithm]};
-    if(msg.dekInfo.parameters) {
-      header.values.push(msg.dekInfo.parameters);
-    }
-    rval += foldHeader(header);
-  }
-
-  if(msg.headers) {
-    // encode all other headers
-    for(var i = 0; i < msg.headers.length; ++i) {
-      rval += foldHeader(msg.headers[i]);
-    }
-  }
-
-  // terminate header
-  if(msg.procType) {
-    rval += '\r\n';
-  }
-
-  // add body
-  rval += forge.util.encode64(msg.body, options.maxline || 64) + '\r\n';
-
-  rval += '-----END ' + msg.type + '-----\r\n';
-  return rval;
-};
-#endif
+//pem.encode = function(msg, options) {
+juce::String encode(const juce::NamedValueSet& msg, const juce::NamedValueSet& options);
+} //end namespace PEM
+} //end namespace Forge
 /**
  * Decodes (deserializes) all PEM messages found in the given string.
  *
@@ -252,9 +217,10 @@ namespace Pem
 struct Msg
 {
     juce::String type;
-    void* procType = nullptr;
-    void* contentDomain = nullptr;
-    void* dekInfo = nullptr;
+    juce::NamedValueSet values;
+//    void* procType = nullptr;
+//    void* contentDomain = nullptr;
+//    void* dekInfo = nullptr;
     juce::StringArray headers;
     juce::MemoryBlock body;
 };
@@ -294,6 +260,7 @@ ArrayType decode(const StringType& pemString)
     std::smatch match;
     std::regex_search(stdString, match, characters);
     
+#if false
     if(! match.empty() )
     {
         DBG( "found: " << match.size() << " matches" );
@@ -306,6 +273,7 @@ ArrayType decode(const StringType& pemString)
     {
         DBG( "no matches!" );
     }
+#endif
 //    DBG( "found: " << std::distance(characters_begin, characters_end) << " characters" );
 //    for (std::sregex_iterator i = characters_begin; i != characters_end; ++i)
     {
@@ -319,6 +287,7 @@ ArrayType decode(const StringType& pemString)
 //        match = rMessage.exec(str);
 //        auto match = Forge::RegexFunctions::search(rMessage, str);
         auto match = Forge::RegexFunctions::searchAndGetMatches(rMessage, str);
+#if false
         DBG( "matches: ");
         int i = 0;
         for( auto m : match )
@@ -326,6 +295,7 @@ ArrayType decode(const StringType& pemString)
             DBG(i << ": " << m );
             ++i;
         }
+#endif
 //        if(!match)
         if( match.isEmpty() )
         {
@@ -371,11 +341,15 @@ ArrayType decode(const StringType& pemString)
         
         //remove all \r\n from msg.body
         auto base64Text = match[3];
+#if false
         DBG( base64Text.length() );
         DBG( base64Text);
+#endif
         base64Text = base64Text.removeCharacters("\r\n");
 //        DBG( base64Text );
+#if false
         DBG( base64Text.length() );
+#endif
         {
             juce::MemoryOutputStream mos(msg.body, false);
 //            msg.body = juce::Base64::convertFromBase64(mos, match[3]);
@@ -388,8 +362,9 @@ ArrayType decode(const StringType& pemString)
             }
         }
 //        rval.push(msg);
-        
+#if false
         DBG( msg.body.getSize() );
+#endif
         rval.add(msg);
         
         //skip headers for now.

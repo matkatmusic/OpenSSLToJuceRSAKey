@@ -203,5 +203,63 @@ ASNObject::Ptr ASNObject::fromVar(juce::var v)
     return ptr;
 }
 
+juce::MemoryBlock oidToDer(juce::String oid)
+{
+//asn1.oidToDer = function(oid) {
+    // split OID into individual values
+//    var values = oid.split('.');
+    auto values = juce::StringArray::fromTokens(oid, ".", "");
+//    var bytes = forge.util.createBuffer();
+    auto block = juce::MemoryBlock();
+    auto bytes = juce::MemoryOutputStream(block, false);
+    // first byte is 40 * value1 + value2
+//    bytes.putByte(40 * parseInt(values[0], 10) + parseInt(values[1], 10));
+    bytes.writeByte(40 + values[0].getIntValue() + values[1].getIntValue());
+    // other bytes are each value in base 128 with 8th bit set except for
+    // the last byte for each value
+//    var last, valueBytes, value, b;
+    bool last;
+    std::vector<char> valueBytes;
+    unsigned int value;
+    int b;
+    
+//    for(var i = 2; i < values.length; ++i)
+    for( int i = 2; i < values.size(); ++i )
+    {
+        // produce value bytes in reverse because we don't know how many
+        // bytes it will take to store the value
+        last = true;
+//        valueBytes = [];
+        valueBytes.clear();
+//        value = parseInt(values[i], 10);
+        value = values[i].getIntValue();
+        
+        do
+        {
+            b = value & 0x7F;
+//            value = value >>> 7; //this is javascript unsigned shift right
+            value = value >> 7;
+            // if value is not last, then turn on 8th bit
+            if(!last)
+            {
+                b |= 0x80;
+            }
+//            valueBytes.push(b);
+            valueBytes.push_back(b);
+            last = false;
+        } while(value > 0);
+        
+        // add value bytes in reverse (needs to be in big endian)
+//        for(var n = valueBytes.length - 1; n >= 0; --n)
+        for( size_t n = valueBytes.size() - 1; n != 0; --n)
+        {
+//            bytes.putByte(valueBytes[n]);
+            bytes.writeByte(valueBytes[n]);
+        }
+    }
+
+    return block;
+};
+
 } //end namespace ASN1
 } //end namespace Forge

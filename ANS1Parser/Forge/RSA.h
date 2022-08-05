@@ -1496,8 +1496,8 @@ struct IsReferenceCountedType : std::false_type { };
 template<typename U>
 struct IsReferenceCountedType<juce::ReferenceCountedObjectPtr<U>, U> : std::true_type { };
 
-template<typename ASNType>
-juce::RSAKey publicKeyFromASN1(ASNType obj)
+template<typename ReturnType, typename ASNType>
+ReturnType publicKeyFromASN1(ASNType obj)
 {
     static_assert(IsReferenceCountedType<ASNType, typename ASNType::ReferencedType>::value, "ASNType must be an instance of a juce::ReferenceCountedObjectPtr");
 //pki.publicKeyFromAsn1 = function(obj) {
@@ -1614,7 +1614,7 @@ juce::RSAKey publicKeyFromASN1(ASNType obj)
     }
 //    obj = Forge::ASN1::ASNObject::fromVar(data);
     e.loadFromMemoryBlock(*data.getBinaryData());
-    auto key = juce::RSAKey(n.toString(16) + "," + e.toString(16));
+    auto key = ReturnType(n.toString(16) + "," + e.toString(16));
     if(key.isValid())
         return key;
     jassertfalse;
@@ -1635,6 +1635,9 @@ namespace Forge
 {
 namespace PKI
 {
+//forward declaration:
+template<typename KeyType>
+ASN1::ASNObject::Ptr publicKeyToRSAPublicKey(KeyType key);
 //pki.publicKeyToAsn1 = pki.publicKeyToSubjectPublicKeyInfo = function(key) {
   // SubjectPublicKeyInfo
 template<typename ASNType, typename KeyType>
@@ -1684,7 +1687,7 @@ ASNType publicKeyToAsn1(KeyType key)
 //    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OID, false,
 //      asn1.oidToDer(pki.oids.rsaEncryption).getBytes()),
     const auto& oids = PKI::oids();
-    auto oid = [&]()
+    auto oid = [&]() -> juce::String
     {
         for( auto [k, o] : oids )
         {
@@ -1693,6 +1696,9 @@ ASNType publicKeyToAsn1(KeyType key)
                 return k; //return the long version ID code xxxxxx.xx.xxxx.xx.xx.x.x
             }
         }
+        
+        jassertfalse;
+        return {};
     }();
     
     if( oid.isEmpty() )
@@ -1721,10 +1727,11 @@ ASNType publicKeyToAsn1(KeyType key)
     // subjectPublicKey
 //    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.BITSTRING, false, [
 //      pki.publicKeyToRSAPublicKey(key)
+    auto rsaPublicKey = Forge::PKI::publicKeyToRSAPublicKey(key);
     auto subjectPublicKey = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                           ASN1::Type::BITSTRING,
                                                           false,
-                                                          {publicKeyToRSAPublicKey(key)},
+                                                          {rsaPublicKey},
                                                           {}, //no byte array,
                                                           {}); //no parse options
     
@@ -1739,8 +1746,9 @@ ASNType publicKeyToAsn1(KeyType key)
                                                               {AlgorithmIdentifier, subjectPublicKey},
                                                               {},   //no byte array
                                                               {});  //no parse options
-    
+//    jassertfalse;
     return SubjectPublicKeyInfo;
+//    return {};
 };
 
 
