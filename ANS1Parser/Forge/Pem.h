@@ -286,18 +286,18 @@ ArrayType decode(const StringType& pemString)
     {
 //        match = rMessage.exec(str);
 //        auto match = Forge::RegexFunctions::search(rMessage, str);
-        auto match = Forge::RegexFunctions::searchAndGetMatches(rMessage, str);
+        auto regexMatch = Forge::RegexFunctions::searchAndGetMatches(rMessage, str);
 #if false
         DBG( "matches: ");
         int i = 0;
-        for( auto m : match )
+        for( auto m : regexMatch )
         {
             DBG(i << ": " << m );
             ++i;
         }
 #endif
 //        if(!match)
-        if( match.isEmpty() )
+        if( regexMatch.isEmpty() )
         {
             break;
         }
@@ -305,13 +305,13 @@ ArrayType decode(const StringType& pemString)
         // accept "NEW CERTIFICATE REQUEST" as "CERTIFICATE REQUEST"
         // https://datatracker.ietf.org/doc/html/rfc7468#section-7
 //        var type = match[1];
-        if( match.size() < 2 )
+        if( regexMatch.size() < 2 )
         {
             jassertfalse;
             break;
         }
         
-        auto type = match[1];
+        auto type = regexMatch[1];
 //        if(type === 'NEW CERTIFICATE REQUEST')
         if( type == "NEW CERTIFICATE REQUEST")
         {
@@ -331,7 +331,7 @@ ArrayType decode(const StringType& pemString)
 //        body: forge.util.decode64(match[3])
 //        };
         
-        if( match.size() < 4 )
+        if( regexMatch.size() < 4 )
         {
             jassertfalse;
             break;
@@ -340,7 +340,7 @@ ArrayType decode(const StringType& pemString)
         msg.type = type;
         
         //remove all \r\n from msg.body
-        auto base64Text = match[3];
+        auto base64Text = regexMatch[3];
 #if false
         DBG( base64Text.length() );
         DBG( base64Text);
@@ -462,7 +462,7 @@ ArrayType decode(const StringType& pemString)
          
          for my purposes, I can replace the 0th entry in the returned match with ''
          */
-        str = str.replace(match[0], "");
+        str = str.replace(regexMatch[0], "");
     }
     
 //    if(rval.length === 0)
