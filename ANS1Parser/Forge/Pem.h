@@ -213,7 +213,12 @@ public:
 
 namespace Pem
 {
-
+namespace V2
+{
+juce::Array<juce::NamedValueSet> decode(const juce::String& pemString);
+}
+namespace V1
+{
 struct Msg
 {
     juce::String type;
@@ -478,7 +483,7 @@ ArrayType decode(const StringType& pemString)
     
     return rval;
 };
-
+} //end namespace V1
 } //end namespace Pem
 } //end namspace Forge
 

@@ -892,11 +892,62 @@ namespace Forge
 {
 namespace PKI
 {
+namespace V2
+{
+template<typename KeyType>
+KeyType publicKeyFromPem(juce::String pem)
+{
+    auto decoded = Forge::Pem::V2::decode(pem); //this needs to return an array of NamedValueSet instances.
+    if( std::distance(decoded.begin(), decoded.end()) == 0 )
+    {
+        jassertfalse;
+        return {};
+    }
+    
+    auto msg = decoded[0];
+    
+    if(msg.contains("type") && msg.getVarPointer("type")->isString() )
+    {
+        auto type = msg.getVarPointer("type")->toString();
+        if( type != "PUBLIC KEY" && type != "RSA PUBLIC KEY" )
+        {
+            DBG("Could not convert public key from PEM; PEM header type is not \"PUBLIC KEY\" or \"RSA PUBLIC KEY\".");
+            jassertfalse;
+            return {};
+        }
+    }
+    
+    if( msg.contains("procType") &&
+       msg.getVarPointer("procType")->isString() &&
+       msg.getVarPointer("procType")->toString() == "ENCRYPTED" )
+    {
+        DBG( "Could not convert public key from PEM; PEM is encrypted." );
+        jassertfalse;
+        return {};
+    }
+    
+    //             convert DER to ASN.1 object
+    //            var obj = asn1.fromDer(msg.body);
+    jassert(msg.contains("body"));
+    auto bodyPtr = msg.getVarPointer("body");
+    jassert(bodyPtr->isBinaryData());
+    auto body = *bodyPtr->getBinaryData();
+//    auto obj = Forge::ASN1::fromDer<Forge::ASN1::ASNObject>(msg.body);
+    auto obj = Forge::ASN1::V2::fromDer(body, {});//this function should take a memory block
+    
+    //            return pki.publicKeyFromASN1(obj)
+    auto key = Forge::PKI::publicKeyFromASN1<KeyType>(obj); //this function should take a namedValueSet
+    jassert(key.isValid());
+    return key;
+}
+} //end namespace V2
+namespace V1
+{
 template<typename KeyType, typename PemType>
 KeyType publicKeyFromPem(const PemType& pem)
 {
 //    var msg = forge.pem.decode(pem)[0];
-    auto decoded = Forge::Pem::decode<juce::Array<Forge::Pem::Msg>>(pem);
+    auto decoded = Forge::Pem::V1::decode<juce::Array<Forge::Pem::V1::Msg>>(pem);
     
     if( std::distance(decoded.begin(), decoded.end()) == 0 )
     {
@@ -933,7 +984,7 @@ KeyType publicKeyFromPem(const PemType& pem)
 
     //             convert DER to ASN.1 object
     //            var obj = asn1.fromDer(msg.body);
-    auto obj = Forge::ASN1::fromDer<Forge::ASN1::ASNObject>(msg.body);
+    auto obj = Forge::ASN1::V1::fromDer<Forge::ASN1::V1::ASNObject>(msg.body);
     
     //            return pki.publicKeyFromASN1(obj)
 //    auto key = Forge::PKI::publicKeyFromASN1(obj);
@@ -941,6 +992,7 @@ KeyType publicKeyFromPem(const PemType& pem)
     jassert(key.isValid());
     return key;
 }
+} //end namespace V1
 } //end namespace PKI
 } //end namespace Forge
 
@@ -970,8 +1022,8 @@ PEMType publicKeyToPem(const KeyType& key, int maxLine = 64)
     juce::NamedValueSet msg;
     msg.set("type", "PUBLIC KEY");
 //    auto asn1 = Forge::PKI::publicKeyToAsn1(key);
-    auto asn1 = Forge::PKI::publicKeyToAsn1<ASN1::ASNObject::Ptr>(key);
-    auto derMemBlock = Forge::ASN1::toDer(asn1);
+    auto asn1 = Forge::PKI::publicKeyToAsn1<ASN1::V1::ASNObject::Ptr>(key);
+    auto derMemBlock = Forge::ASN1::V1::toDer(asn1);
     msg.set("body", derMemBlock);
     using NV = juce::NamedValueSet::NamedValue;
     auto options = juce::NamedValueSet({NV("maxLine", maxLine)});

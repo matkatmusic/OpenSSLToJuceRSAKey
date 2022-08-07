@@ -489,6 +489,8 @@ namespace Forge
 {
 namespace ASN1
 {
+namespace V1
+{
 struct ParseOptions : juce::ReferenceCountedObject
 {
     using Ptr = juce::ReferenceCountedObjectPtr<ParseOptions>;
@@ -498,6 +500,7 @@ struct ParseOptions : juce::ReferenceCountedObject
     bool decodeBitStrings = true;
     juce::MemoryBlock bitStringContents;
 };
+} //end namespace V1
 
 enum class Class : int
 {
@@ -532,6 +535,8 @@ enum class Type : int
     BMPSTRING = 30
 };
 
+namespace V1
+{
 template<typename StreamType>
 void _checkBufferLength(StreamType& bytes,
                         const juce::int64 remaining,
@@ -655,16 +660,16 @@ struct ASNObject : juce::ReferenceCountedObject
     static Ptr fromVar(juce::var v);
 };
 
-
+} //end namespace V1
 } //end namespace ASN1
 } //end namespace Forge
 
 namespace juce
 {
 template<>
-struct VariantConverter<std::vector<Forge::ASN1::ASNObject::Ptr>>
+struct VariantConverter<std::vector<Forge::ASN1::V1::ASNObject::Ptr>>
 {
-    static juce::var toVar(std::vector<Forge::ASN1::ASNObject::Ptr> vec)
+    static juce::var toVar(std::vector<Forge::ASN1::V1::ASNObject::Ptr> vec)
     {
         juce::Array<var> arr;
         for( auto p : vec )
@@ -675,15 +680,15 @@ struct VariantConverter<std::vector<Forge::ASN1::ASNObject::Ptr>>
         return arr;
     }
     
-    static std::vector<Forge::ASN1::ASNObject::Ptr> fromVar(juce::var v)
+    static std::vector<Forge::ASN1::V1::ASNObject::Ptr> fromVar(juce::var v)
     {
         jassert(v.isArray());
         
-        std::vector<Forge::ASN1::ASNObject::Ptr> vec;
+        std::vector<Forge::ASN1::V1::ASNObject::Ptr> vec;
         auto* arr = v.getArray();
         for( auto& v : *arr )
         {
-            vec.push_back( Forge::ASN1::ASNObject::fromVar(v) );
+            vec.push_back( Forge::ASN1::V1::ASNObject::fromVar(v) );
         }
         
         return vec;
@@ -695,6 +700,8 @@ struct VariantConverter<std::vector<Forge::ASN1::ASNObject::Ptr>>
 namespace Forge
 {
 namespace ASN1
+{
+namespace V1
 {
 struct Capture : juce::ReferenceCountedObject
 {
@@ -1076,9 +1083,41 @@ typename ASNType::Ptr _fromDer(juce::MemoryInputStream& bytes, juce::int64 remai
     }
     
     // create and return asn1 object
-    return ASN1::create<ASNType>(tagClass, type, constructed, objectList, byteArray, asn1Options);
+    return ASN1::V1::create<ASNType>(tagClass, type, constructed, objectList, byteArray, asn1Options);
 }
+}//end namespace V1
 
+namespace V2
+{
+/*
+ the juce::var class can store a DynamicObject
+ this dynamicObject class internally uses a NamedValueSet.
+ the NamedValueSet holds an array of NamedValue objects, which are basically
+ {
+     juce::Identifier name;
+     juce::var value;
+ }
+ 
+ the juce::var class also has operator[](const Identifier&)
+ this function works if the juce::var instance has been initialized with a DynamicObject like this:
+ juce::var v(new DynamicObject());
+ */
+juce::var fromDer(const juce::MemoryBlock& bytes,
+                            juce::NamedValueSet parseOptions);
+juce::var _fromDer(juce::MemoryInputStream& bytes,
+                             juce::int64 remaining,
+                             int depth,
+                             juce::NamedValueSet options);
+juce::var create(Class tagClass,
+                 Type type,
+                 bool constructed,
+                 juce::var value,
+                 juce::NamedValueSet options);
+juce::var copy(const juce::var& obj, juce::NamedValueSet options);
+} //end namespace V2
+
+namespace V1
+{
 template<typename ASNType>
 typename ASNType::Ptr fromDer(const juce::MemoryBlock& bytes, ParseOptions options = ParseOptions())
 {
@@ -1127,6 +1166,7 @@ typename ASNType::Ptr fromDer(const juce::MemoryBlock& bytes, ParseOptions optio
     }
     return value;
 }
+} //end namespace V1
 } //end namespace ASN1
 } //end namespace Forge
 #if false
@@ -1313,6 +1353,8 @@ namespace Forge
 {
 namespace ASN1
 {
+namespace V1
+{
 /**
  * Converts the given asn1 object to a buffer of bytes in DER format.
  *
@@ -1381,7 +1423,7 @@ juce::MemoryBlock toDer(ASNType obj)
             if( obj->objectList[i] != nullptr )
             {
 //                value.putBuffer(asn1.toDer(obj.value[i]));
-                auto memoryBlockToAdd = ASN1::toDer(obj->objectList[i]);
+                auto memoryBlockToAdd = ASN1::V1::toDer(obj->objectList[i]);
                 auto mis = juce::MemoryInputStream(memoryBlockToAdd, false);
                 value.writeFromInputStream(mis,
                                            mis.getNumBytesRemaining());
@@ -1519,6 +1561,7 @@ juce::MemoryBlock toDer(ASNType obj)
  * @return the byte buffer.
  */
 juce::MemoryBlock oidToDer(juce::String oid);
+}//end namespace V1
 }//end namespace ASN1
 }//end namespace Forge
 #if false
@@ -1536,9 +1579,12 @@ namespace Forge
 {
 namespace ASN1
 {
+namespace V1
+{
 //asn1.derToOid = function(bytes) {
 juce::String derToOid(juce::String str);
 juce::String derToOid(const juce::MemoryBlock& b);
+}//end namespace V1
 }//end namespace ASN1
 }//end namespace Forge
 #if false
@@ -1865,6 +1911,8 @@ namespace Forge
 {
 namespace ASN1
 {
+namespace V1
+{
 //asn1.validate = function(obj, v, capture, errors) {
 template<
     typename ASNType,
@@ -1906,7 +1954,7 @@ bool validate(ASNType& obj,
                     if( obj.objectList[j] != nullptr )
                     {
 //                        rval = asn1.validate(obj.value[j], v.value[i], capture, errors);
-                        rval = Forge::ASN1::validate(*obj.objectList[j], *v.value[i], capture, errors);
+                        rval = Forge::ASN1::V1::validate(*obj.objectList[j], *v.value[i], capture, errors);
                         if(rval)
                         {
                             ++j;
@@ -1943,7 +1991,7 @@ bool validate(ASNType& obj,
 //                    (*capture)[v.capture] = obj.value;
                     if(! obj.objectList.empty() )
                     {
-                        capture->set(v.capture, juce::VariantConverter<std::vector<Forge::ASN1::ASNObject::Ptr>>::toVar(obj.objectList));
+                        capture->set(v.capture, juce::VariantConverter<std::vector<Forge::ASN1::V1::ASNObject::Ptr>>::toVar(obj.objectList));
                     }
                     else if(! obj.byteArray.isEmpty() )
                     {
@@ -2044,6 +2092,7 @@ bool validate(ASNType& obj,
     }
     return rval;
 };
+} //end namespace V1
 } //end namespace ASN1
 } //end namespace Forge
 #if false

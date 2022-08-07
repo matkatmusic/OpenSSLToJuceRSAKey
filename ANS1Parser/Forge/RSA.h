@@ -1743,13 +1743,13 @@ ReturnType publicKeyFromASN1(ASNType obj)
      However, there is a fixed set of properties being added,
      and those properties come from the Validator instance used.
      */
-    Forge::ASN1::Capture::Ptr capture = new Forge::ASN1::Capture();
+    Forge::ASN1::V1::Capture::Ptr capture = new Forge::ASN1::V1::Capture();
 //  var errors = [];
     std::vector<juce::String> errors;
     
 //  if(asn1.validate(obj, publicKeyValidator, capture, errors)) {
     auto publicKeyValidator = Forge::RSA::getPublicKeyValidator();
-    if( Forge::ASN1::validate(*obj, *publicKeyValidator, capture, errors))
+    if( Forge::ASN1::V1::validate(*obj, *publicKeyValidator, capture, errors))
     {
         // get oid
 //        var oid = asn1.derToOid(capture.publicKeyOid);
@@ -1762,12 +1762,12 @@ ReturnType publicKeyFromASN1(ASNType obj)
             return {};
         }
         
-        auto oidPtr = Forge::ASN1::ASNObject::fromVar(data);
+        auto oidPtr = Forge::ASN1::V1::ASNObject::fromVar(data);
         
         
 //        auto block = oidPtr->byteArray;
         jassert(! oidPtr->byteArray.isEmpty() );
-        auto oid = Forge::ASN1::derToOid(oidPtr->byteArray);
+        auto oid = Forge::ASN1::V1::derToOid(oidPtr->byteArray);
 //        if(oid !== pki.oids.rsaEncryption)
         const auto& oids = Forge::PKI::oids();
         if( oids.find(oid) == oids.end() )
@@ -1787,7 +1787,7 @@ ReturnType publicKeyFromASN1(ASNType obj)
             jassertfalse;
             return {};
         }
-        obj = Forge::ASN1::ASNObject::fromVar(data);
+        obj = Forge::ASN1::V1::ASNObject::fromVar(data);
     }
     
     // get RSA params
@@ -1796,7 +1796,7 @@ ReturnType publicKeyFromASN1(ASNType obj)
     
 //    if(!asn1.validate(obj, rsaPublicKeyValidator, capture, errors))
     auto rsaPublicKeyValidator = Forge::RSA::getRSAPublicKeyValidator();
-    if( !Forge::ASN1::validate(*obj, *rsaPublicKeyValidator, capture, errors) )
+    if( !Forge::ASN1::V1::validate(*obj, *rsaPublicKeyValidator, capture, errors) )
     {
 //        var error = new Error('Cannot read public key. ' +
 //                              'ASN.1 object does not contain an RSAPublicKey.');
@@ -1900,7 +1900,7 @@ namespace PKI
 {
 //forward declaration:
 template<typename KeyType>
-ASN1::ASNObject::Ptr publicKeyToRSAPublicKey(KeyType key);
+ASN1::V1::ASNObject::Ptr publicKeyToRSAPublicKey(KeyType key);
 //pki.publicKeyToAsn1 = pki.publicKeyToSubjectPublicKeyInfo = function(key) {
   // SubjectPublicKeyInfo
 template<typename ASNType, typename KeyType>
@@ -1939,7 +1939,7 @@ ASNType publicKeyToAsn1(KeyType key)
  */
     // parameters (null)
 //    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.NULL, false, '')
-    auto parameters = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+    auto parameters = ASN1::V1::create<ASN1::V1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                     ASN1::Type::NULL_,
                                                     false, //not constructed
                                                     {}, //no object list
@@ -1970,8 +1970,8 @@ ASNType publicKeyToAsn1(KeyType key)
         return {};
     }
     
-    auto algorithmOIDasDerByteArray =  ASN1::oidToDer(oid);
-    auto algorithm = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+    auto algorithmOIDasDerByteArray =  ASN1::V1::oidToDer(oid);
+    auto algorithm = ASN1::V1::create<ASN1::V1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                    ASN1::Type::OID,
                                                    false, //not constructed
                                                    {}, //no object list
@@ -1980,7 +1980,7 @@ ASNType publicKeyToAsn1(KeyType key)
     
     // AlgorithmIdentifier
 //    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [algorithm, parameters])
-    auto AlgorithmIdentifier = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+    auto AlgorithmIdentifier = ASN1::V1::create<ASN1::V1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                              ASN1::Type::SEQUENCE,
                                                              true,
                                                              {algorithm, parameters},
@@ -1991,7 +1991,7 @@ ASNType publicKeyToAsn1(KeyType key)
 //    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.BITSTRING, false, [
 //      pki.publicKeyToRSAPublicKey(key)
     auto rsaPublicKey = Forge::PKI::publicKeyToRSAPublicKey(key);
-    auto subjectPublicKey = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+    auto subjectPublicKey = ASN1::V1::create<ASN1::V1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                           ASN1::Type::BITSTRING,
                                                           false,
                                                           {rsaPublicKey},
@@ -2003,7 +2003,7 @@ ASNType publicKeyToAsn1(KeyType key)
 //    etc...
 //    SubjectPublicKeyInfo
 //       use objectList { AlgorithmIdentifier, subjectPublicKey }
-    auto SubjectPublicKeyInfo = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+    auto SubjectPublicKeyInfo = ASN1::V1::create<ASN1::V1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                               ASN1::Type::SEQUENCE,
                                                               true,
                                                               {AlgorithmIdentifier, subjectPublicKey},
@@ -2024,7 +2024,7 @@ ASNType publicKeyToAsn1(KeyType key)
  */
 //pki.publicKeyToRSAPublicKey = function(key) {
 template<typename KeyType>
-ASN1::ASNObject::Ptr publicKeyToRSAPublicKey(KeyType key)
+ASN1::V1::ASNObject::Ptr publicKeyToRSAPublicKey(KeyType key)
 {
 #if false
   // RSAPublicKey
@@ -2037,19 +2037,19 @@ ASN1::ASNObject::Ptr publicKeyToRSAPublicKey(KeyType key)
       _bnToBytes(key.e))
   ]);
 #endif
-    auto modulus = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+    auto modulus = ASN1::V1::create<ASN1::V1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                  ASN1::Type::INTEGER,
                                                  false,
                                                  {},    //no object list
                                                  key.getModulus().toMemoryBlock(),
                                                  {});   //no options
-    auto exponent = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+    auto exponent = ASN1::V1::create<ASN1::V1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                   ASN1::Type::INTEGER,
                                                   false,
                                                   {},   //no object list
                                                   key.getExponent().toMemoryBlock(),
                                                   {});  //no options
-    auto rsaPublicKey = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
+    auto rsaPublicKey = ASN1::V1::create<ASN1::V1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                       ASN1::Type::SEQUENCE,
                                                       true,
                                                       {modulus, exponent},
