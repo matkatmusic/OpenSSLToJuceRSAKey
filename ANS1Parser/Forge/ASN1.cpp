@@ -161,7 +161,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
     }
     
     // if a BIT STRING, save the contents including padding
-    if( value == juce::var() && tagClass == ASN1::Class::UNIVERSAL &&
+    if( value.isVoid() && tagClass == ASN1::Class::UNIVERSAL &&
        type == ASN1::Type::BITSTRING )
     {
         //js ByteStringBuffer::bytes reads the data without changing the read position.
@@ -176,7 +176,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
     // determine if a non-constructed value should be decoded as a composed
     // value that contains other ASN.1 objects. BIT STRINGs (and OCTET STRINGs)
     // can be used this way.
-    if( value == juce::var() &&
+    if( value.isVoid() &&
        options["decodeBitStrings"].equalsWithSameType(true) &&
        tagClass == ASN1::Class::UNIVERSAL &&
        // FIXME: OCTET STRINGs not yet supported here
@@ -235,7 +235,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
 //            {
 //            }
         }
-        if(value == juce::var())
+        if(value.isVoid())
         {
             // restore read position
             bytes.setPosition(savedRead);
@@ -243,7 +243,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
         }
     }
     
-    if(value == juce::var())
+    if(value.isVoid())
     {
         // asn1 not constructed or composed, get raw value
         // TODO: do DER to OID conversion and vice-versa in .toDer?
@@ -372,11 +372,21 @@ juce::var copy(const juce::var& obj, juce::NamedValueSet options)
         return obj;
     }
     
-    jassert(obj.isObject());
-    if(! obj.isObject() )
+    jassert(obj.isObject() || obj.isBinaryData());
+    if(! obj.isObject() && !obj.isBinaryData() )
     {
         return {};
     }
+    
+    /*
+     This copy step has some issues. Sometimes object is of type void. Sometimes object is type binary.
+     the line:
+        data->setProperty("value", copy(obj["value"], options));
+     is the culprit here.
+     
+     I think there is a juce::JSON function taht lets me print out the way the juce::var object is currently structed.
+     This would let me inspect how it is laid out, and see if it is lined up with the javascript version. 
+     */
     
     juce::DynamicObject::Ptr data = new juce::DynamicObject();
     
@@ -646,5 +656,157 @@ juce::MemoryBlock oidToDer(juce::String oid)
     return block;
 };
 } //end namespace V1
+
+namespace V2
+{
+bool validate(const juce::var& obj,
+              const juce::var& v,
+              juce::var& capture,
+              juce::StringArray& errors)
+{
+    bool rval = false;
+    
+    // ensure tag class and type are the same if specified
+    if( (obj["tagClass"].equalsWithSameType(v["tagClass"]) || v["tagClass"].isVoid() ) &&
+       (obj["type"].equalsWithSameType(v["type"] || v["type"].isVoid()) ) )
+    {
+        // ensure constructed flag is the same if specified
+        if( obj["constructed"].equalsWithSameType(v["constructed"]) || v["constructed"].isVoid() )
+        {
+            rval = true;
+            
+            // handle sub values
+            if( v.hasProperty("value") && v["value"].isArray() )
+            {
+                int j = 0;
+                auto& v_value_arr = *v["value"].getArray();
+                for(int i = 0; rval && i < v_value_arr.size(); ++i)
+                {
+                    rval = static_cast<bool>(v_value_arr[i]["optional"]) || false;
+                    
+                    if(! obj["value"].isArray() )
+                    {
+                        jassertfalse; //obj.value should exist
+                        return false;
+                    }
+                    
+                    auto& obj_value_arr = *obj["value"].getArray();
+                    if(obj_value_arr[j])
+                    {
+                        rval = validate(obj_value_arr[j], v_value_arr[i], capture, errors);
+                        if(rval)
+                        {
+                            ++j;
+                        }
+                        else if(v_value_arr[i]["optional"].equalsWithSameType(true))
+                        {
+                            rval = true;
+                        }
+                    }
+                    if(!rval)
+                    {
+                        juce::String error;
+                        error << "[" << v["name"].toString() << "] ";
+                        error << "Tag class \"" << v["tagClass"].toString() << "\", type ";
+                        error << v["type"].toString() << "\" expected value length \"";
+                        error << v["value"].getArray()->size() << "\", got \"";
+                        error << obj["value"].getArray()->size() << "\"";
+                        errors.add(error);
+                    }
+                }
+            }
+            
+            if(rval && capture.isObject())
+            {
+                if(v.hasProperty("capture"))
+                {
+                    capture.getDynamicObject()->setProperty(v["capture"].toString(), obj["value"]);
+                }
+                if( v.hasProperty("captureAsn1"))
+                {
+                    capture.getDynamicObject()->setProperty(v["captureAsn1"].toString(), obj);
+                }
+                if( v.hasProperty("captureBitStringContents") && obj.hasProperty("bitStringContents"))
+                {
+                    capture.getDynamicObject()->setProperty(v["captureBitStringContents"].toString(), obj["bitStringContents"]);
+                }
+                if( v.hasProperty("captureBitStringValue") && obj.hasProperty("bitStringContents"))
+                {
+                    auto& mb = *obj["bitStringContents"].getBinaryData();
+                    if(mb.getSize() < 2)
+                    {
+                        capture.getDynamicObject()->setProperty(v["captureBitStringValue"].toString(), "");
+                    }
+                    else
+                    {
+                        // FIXME: support unused bits with data shifting
+//                        var unused = obj.bitStringContents.charCodeAt(0)
+                        auto unused = mb.getBitRange(0, 8);
+                        if(unused != 0)
+                        {
+//                            throw new Error(
+//                                            'captureBitStringValue only supported for zero unused bits');
+                            DBG( "captureBitStringValue only supported for zero unused bits");
+                            jassertfalse;
+                            return false;
+                        }
+                        //capture every byte except the first one.
+                        //capture[v.captureBitStringValue] = obj.bitStringContents.slice(1);
+                        juce::MemoryBlock sliced;
+                        {
+                            juce::MemoryOutputStream mos(sliced, false);
+                            
+                            juce::MemoryInputStream mis(mb, false);
+                            mis.readByte();
+                            mos.writeFromInputStream(mis, mis.getNumBytesRemaining());
+                        }
+                        capture.getDynamicObject()->setProperty(v["captureBitStringValue"].toString(), sliced);
+                        
+                    }
+                }
+            }
+        }
+        else //if(errors)
+        {
+            juce::String error;
+            error << "[" << v["name"].toString() << "] ";
+            error << "Expected constructed \"" << static_cast<int>(static_cast<bool>(v["constructed"])) << "\", got \"";
+            error << static_cast<int>(static_cast<bool>(obj["constructed"])) << "\"";
+            errors.add(error);
+//            errors.push(
+//                        '[' + v.name + '] ' +
+//                        'Expected constructed "' + v.constructed + '", got "' +
+//                        obj.constructed + '"');
+        }
+    }
+    else //if(errors)
+    {
+        if(! obj["tagClass"].equalsWithSameType(v["tagClass"] ))
+        {
+            juce::String error;
+            error << "[" << v["name"].toString() << "] ";
+            error << "Expected tag class \"" << static_cast<int>(v["tagClass"]) << "\", got \"";
+            error << static_cast<int>(obj["tagClass"]) << "\"";
+            errors.add(error);
+//            errors.push(
+//                        '[' + v.name + '] ' +
+//                        'Expected tag class "' + v.tagClass + '", got "' +
+//                        obj.tagClass + '"');
+        }
+//        if(obj.type !== v.type)
+        if( ! obj["type"].equalsWithSameType(v["type"]) )
+        {
+            juce::String error;
+            error << "[" << v["name"].toString() << "] ";
+            error << "Expected type \"" << static_cast<int>(v["type"]) << "\", got \"" << static_cast<int>(obj["type"]) << "\"";
+            errors.add(error);
+//            errors.push(
+//                        '[' + v.name + '] ' +
+//                        'Expected type "' + v.type + '", got "' + obj.type + '"');
+        }
+    }
+    return rval;
+};
+} //end namespace V2
 } //end namespace ASN1
 } //end namespace Forge

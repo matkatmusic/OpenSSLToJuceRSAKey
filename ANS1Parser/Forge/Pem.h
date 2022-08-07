@@ -55,6 +55,8 @@ namespace Forge
 {
 namespace PEM
 {
+namespace V1
+{
 /**
  * Encodes (serializes) the given PEM object.
  *
@@ -66,6 +68,7 @@ namespace PEM
  */
 //pem.encode = function(msg, options) {
 juce::String encode(const juce::NamedValueSet& msg, const juce::NamedValueSet& options);
+} //end namespace V1
 } //end namespace PEM
 } //end namespace Forge
 /**
@@ -211,7 +214,7 @@ public:
     }
 };
 
-namespace Pem
+namespace PEM
 {
 namespace V2
 {
@@ -484,7 +487,7 @@ ArrayType decode(const StringType& pemString)
     return rval;
 };
 } //end namespace V1
-} //end namespace Pem
+} //end namespace PEM
 } //end namspace Forge
 
 #if false

@@ -13,7 +13,161 @@ namespace Forge
 {
 namespace RSA
 {
-Forge::RSA::Validator::Ptr getRSAPublicKeyValidator()
+namespace V2
+{
+//var rsaPublicKeyValidator = {
+  // RSAPublicKey
+//  name: 'RSAPublicKey',
+//  tagClass: asn1.Class.UNIVERSAL,
+//  type: asn1.Type.SEQUENCE,
+//  constructed: true,
+//  value: [{
+//    // modulus (n)
+//    name: 'RSAPublicKey.modulus',
+//    tagClass: asn1.Class.UNIVERSAL,
+//    type: asn1.Type.INTEGER,
+//    constructed: false,
+//    capture: 'publicKeyModulus'
+//  }, {
+//    // publicExponent (e)
+//    name: 'RSAPublicKey.exponent',
+//    tagClass: asn1.Class.UNIVERSAL,
+//    type: asn1.Type.INTEGER,
+//    constructed: false,
+//    capture: 'publicKeyExponent'
+//  }]
+juce::var getRSAPublicKeyValidator()
+{
+    juce::var v( new juce::DynamicObject() );
+    auto* obj = v.getDynamicObject();
+    
+    //  name: 'RSAPublicKey',
+    obj->setProperty("name", "RSAPublicKey");
+    //  tagClass: asn1.Class.UNIVERSAL,
+    obj->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));
+    //  type: asn1.Type.SEQUENCE,
+    obj->setProperty("type", static_cast<int>(ASN1::Type::SEQUENCE));
+    //  constructed: true,
+    obj->setProperty("constructed", true);
+    //  value: [{
+    //    // modulus (n)
+    juce::var modulus ( new juce::DynamicObject() );
+    auto* mod = modulus.getDynamicObject();
+    //    name: 'RSAPublicKey.modulus',
+    mod->setProperty("name", "RSAPublicKey.modulus");
+    //    tagClass: asn1.Class.UNIVERSAL,
+    mod->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));
+    //    type: asn1.Type.INTEGER,
+    mod->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));
+    //    constructed: false,
+    mod->setProperty("constructed", false);
+    //    capture: 'publicKeyModulus'
+    mod->setProperty("capture", "publicKeyModulus");
+    //  }, {
+    //    // publicExponent (e)
+    juce::var publicExponent ( new juce::DynamicObject() );
+    auto exp = publicExponent.getDynamicObject();
+    //    name: 'RSAPublicKey.exponent',
+    exp->setProperty("name", "RSAPublicKey.exponent");
+    //    tagClass: asn1.Class.UNIVERSAL,
+    exp->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));
+    //    type: asn1.Type.INTEGER,
+    exp->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));
+    //    constructed: false,
+    exp->setProperty("constructed", false);
+    //    capture: 'publicKeyExponent'
+    exp->setProperty("capture", "publicKeyExponent");
+    //  }]
+    
+    obj->setProperty("value", juce::Array<juce::var>{modulus, publicExponent});
+    return v;
+}
+
+juce::var getPublicKeyValidator()
+{
+    juce::var v ( new juce::DynamicObject() );
+    auto* o = v.getDynamicObject();
+     // validator for an SubjectPublicKeyInfo structure
+     // Note: Currently only works with an RSA public key
+//    var publicKeyValidator = forge.pki.rsa.publicKeyValidator = {
+//        name: 'SubjectPublicKeyInfo',
+//    tagClass: asn1.Class.UNIVERSAL,
+    o->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));
+//    type: asn1.Type.SEQUENCE,
+    o->setProperty("type", static_cast<int>(ASN1::Type::SEQUENCE));
+//    constructed: true,
+    o->setProperty("constructed", true);
+//    captureAsn1: 'subjectPublicKeyInfo',
+    o->setProperty("captureAsn1", "subjectPublickeyInfo");
+//    value:
+//    [{
+        juce::var algoIdentifier( new juce::DynamicObject() );
+        auto* agido = algoIdentifier.getDynamicObject();
+//        name: 'SubjectPublicKeyInfo.AlgorithmIdentifier',
+        agido->setProperty("name", "SubjectPublicKeyInfo.AlgorithmIdentifier");
+//        tagClass: asn1.Class.UNIVERSAL,
+        agido->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));
+//        type: asn1.Type.SEQUENCE,
+        agido->setProperty("type", static_cast<int>(ASN1::Type::SEQUENCE));
+//        constructed: true,
+        agido->setProperty("constructed", true);
+//        value:
+//        [{
+            juce::var algorithm( new juce::DynamicObject() );
+            auto* algo = algorithm.getDynamicObject();
+//            name: 'AlgorithmIdentifier.algorithm',
+            algo->setProperty("name", "AlgorithmIdentifier.algorithm");
+//            tagClass: asn1.Class.UNIVERSAL,
+            algo->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));
+//            type: asn1.Type.OID,
+            algo->setProperty("type", static_cast<int>(ASN1::Type::OID));
+//            constructed: false,
+            algo->setProperty("constructed", false);
+//            capture: 'publicKeyOid'
+            algo->setProperty("capture", "publicKeyOid");
+//        }]
+        agido->setProperty("value", juce::Array<juce::var>({algorithm}));
+//     },
+//        {
+            // subjectPublicKey
+            juce::var subjectPublicKey( new juce::DynamicObject() );
+            auto* spko = subjectPublicKey.getDynamicObject();
+        
+//        name: 'SubjectPublicKeyInfo.subjectPublicKey',
+            spko->setProperty("name", "SubjectPublicKeyInfo.subjectPublicKey");
+//        tagClass: asn1.Class.UNIVERSAL,
+            spko->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));
+//        type: asn1.Type.BITSTRING,
+            spko->setProperty("type", static_cast<int>(ASN1::Type::BITSTRING));
+//        constructed: false,
+            spko->setProperty("constructed", false);
+//        value: [{
+        // RSAPublicKey
+                juce::var RSAPublicKey( new juce::DynamicObject() );
+                auto* rpko = RSAPublicKey.getDynamicObject();
+//            name: 'SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey',
+                rpko->setProperty("name", "SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey");
+//            tagClass: asn1.Class.UNIVERSAL,
+                rpko->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));
+//            type: asn1.Type.SEQUENCE,
+                rpko->setProperty("type", static_cast<int>(ASN1::Type::SEQUENCE));
+//            constructed: true,
+                rpko->setProperty("constructed", true);
+//            optional: true,
+                rpko->setProperty("optional", true);
+//            captureAsn1: 'rsaPublicKey'
+                rpko->setProperty("captureAsn1", "rsaPublicKey");
+//        }]
+        spko->setProperty("value", juce::Array<juce::var>({RSAPublicKey}));
+//    }]
+    o->setProperty("value", juce::Array<juce::var>(algoIdentifier, subjectPublicKey));
+//    };
+    return v;
+}
+} //end namespace V2
+namespace V1
+{
+Validator::Ptr getRSAPublicKeyValidator()
 {
 //var rsaPublicKeyValidator = {
   // RSAPublicKey
@@ -65,7 +219,7 @@ Forge::RSA::Validator::Ptr getRSAPublicKeyValidator()
     return rsaPublicKeyValidator;
 }
 
-Forge::RSA::Validator::Ptr getPublicKeyValidator()
+Validator::Ptr getPublicKeyValidator()
 {
     /*
      // validator for an SubjectPublicKeyInfo structure
@@ -159,6 +313,6 @@ Forge::RSA::Validator::Ptr getPublicKeyValidator()
 
     return SubjectPublicKeyInfo;
 }
-
+} //end namespace V1
 } //end namespace RSA
 } //end namespace Forge

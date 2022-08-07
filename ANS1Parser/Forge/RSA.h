@@ -228,6 +228,8 @@ namespace Forge
 {
 namespace RSA
 {
+namespace V1
+{
 /*
  TODO: use the juce::var class to replace a lot of these named variables
  why?
@@ -276,12 +278,17 @@ struct Validator : juce::ReferenceCountedObject
 //    }
 };
 // validator for an RSA public key
-Forge::RSA::Validator::Ptr getRSAPublicKeyValidator();
+Validator::Ptr getRSAPublicKeyValidator();
 
 
 //var publicKeyValidator = forge.pki.rsa.publicKeyValidator = {
-Forge::RSA::Validator::Ptr getPublicKeyValidator();
-
+Validator::Ptr getPublicKeyValidator();
+} //end namespace V1
+namespace V2
+{
+juce::var getPublicKeyValidator();
+juce::var getRSAPublicKeyValidator();
+} //end namespace V2
 } //end namespace RSA
 } //end namespace Forge
 #if false
@@ -1489,7 +1496,8 @@ namespace Forge
 {
 namespace PKI
 {
-
+namespace V1
+{
 struct JSBigIntData
 {
     std::vector<juce::int32> values;
@@ -1748,7 +1756,7 @@ ReturnType publicKeyFromASN1(ASNType obj)
     std::vector<juce::String> errors;
     
 //  if(asn1.validate(obj, publicKeyValidator, capture, errors)) {
-    auto publicKeyValidator = Forge::RSA::getPublicKeyValidator();
+    auto publicKeyValidator = Forge::RSA::V1::getPublicKeyValidator();
     if( Forge::ASN1::V1::validate(*obj, *publicKeyValidator, capture, errors))
     {
         // get oid
@@ -1795,7 +1803,7 @@ ReturnType publicKeyFromASN1(ASNType obj)
     errors.clear();
     
 //    if(!asn1.validate(obj, rsaPublicKeyValidator, capture, errors))
-    auto rsaPublicKeyValidator = Forge::RSA::getRSAPublicKeyValidator();
+    auto rsaPublicKeyValidator = Forge::RSA::V1::getRSAPublicKeyValidator();
     if( !Forge::ASN1::V1::validate(*obj, *rsaPublicKeyValidator, capture, errors) )
     {
 //        var error = new Error('Cannot read public key. ' +
@@ -1883,6 +1891,82 @@ ReturnType publicKeyFromASN1(ASNType obj)
     jassertfalse;
     return {}; //returns an invalid key
 }
+} //end namespace V1
+namespace V2
+{
+template<typename ReturnType>
+ReturnType publicKeyFromASN1(juce::var obj)
+{
+    // get SubjectPublicKeyInfo
+    juce::var capture(new juce::DynamicObject());
+    juce::StringArray errors;
+    if(ASN1::V2::validate(obj, Forge::RSA::V2::getPublicKeyValidator(), capture, errors))
+    {
+        // get oid
+//        juce::var oid = asn1.derToOid(capture.publicKeyOid);
+        auto oidMb = *capture["publicKeyOid"].getBinaryData();
+        auto oidStr = ASN1::V1::derToOid(oidMb);
+        const auto& oids = Forge::PKI::oids();
+        if( oids.find(oidStr) == oids.end() )
+        {
+//            var error = new Error('Cannot read public key. Unknown OID.');
+//            error.oid = oid;
+//            throw error;
+            DBG( "Cannot read public key.  Unknown OID" );
+            DBG( "OID: " << oidStr );
+            jassertfalse;
+            return {};
+        }
+        obj = capture["rsaPublicKey"];
+    }
+    
+    // get RSA params
+    errors.clear();
+    if(!ASN1::V2::validate(obj, Forge::RSA::V2::getRSAPublicKeyValidator(), capture, errors))
+    {
+//        var error = new Error('Cannot read public key. ' +
+//                              'ASN.1 object does not contain an RSAPublicKey.');
+//        error.errors = errors;
+//        throw error;
+        DBG( "Cannot read public key");
+        DBG( "ASN.1 object does not contain an RSAPublicKey");
+        DBG( "errors during validation:" );
+        for( auto e : errors )
+        {
+            DBG( e );
+        }
+        jassertfalse;
+        return {};
+    }
+    
+    // FIXME: inefficient, get a BigInteger that uses byte strings
+//    var n = forge.util.createBuffer(capture.publicKeyModulus).toHex();
+//    var e = forge.util.createBuffer(capture.publicKeyExponent).toHex();
+    jassert(capture.hasProperty("publicKeyModulus"));
+    jassert(capture["publicKeyModulus"].isBinaryData());
+    const auto& modMB = *capture["publicKeyModulus"].getBinaryData();
+    auto n = juce::String::toHexString(modMB.getData(), modMB.getSize());
+    n = n.replaceCharacters(" ", ""); //remove any spaces
+    
+    jassert(capture.hasProperty("publicKeyExponent"));
+    jassert(capture["publicKeyExponent"].isBinaryData());
+    const auto& expMB = *capture["publicKeyExponent"].getBinaryData();
+    auto e = juce::String::toHexString(expMB.getData(), expMB.getSize());
+    e = e.replaceCharacters(" ", ""); //remove any spaces
+    
+    // set public key
+    auto nbi = juce::BigInteger();
+    nbi.parseString(n, 16);
+    
+    auto ebi = juce::BigInteger();
+    ebi.parseString(e, 16);
+    
+    return ReturnType(nbi.toString(16) + "," + ebi.toString(16));
+//    return pki.setRsaPublicKey(
+//                               new BigInteger(n, 16),
+//                               new BigInteger(e, 16));
+};
+} //end namespace V2
 } //end namespace PKI
 } //end namespace forge
 #if false

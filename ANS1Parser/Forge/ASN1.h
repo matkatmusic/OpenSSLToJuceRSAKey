@@ -1911,6 +1911,13 @@ namespace Forge
 {
 namespace ASN1
 {
+namespace V2
+{
+bool validate(const juce::var& obj,
+              const juce::var& v,
+              juce::var& capture,
+              juce::StringArray& errors);
+} //end namespace V2
 namespace V1
 {
 //asn1.validate = function(obj, v, capture, errors) {

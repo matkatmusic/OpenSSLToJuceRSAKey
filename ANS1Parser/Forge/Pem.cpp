@@ -230,6 +230,8 @@ juce::Array<juce::NamedValueSet> decode(const juce::String& pemString)
     return rval;
 }
 } //end namespace V2
+namespace V1
+{
 juce::String encode(const juce::NamedValueSet& msg, const juce::NamedValueSet& options)
 {
 //    options = options || {};
@@ -334,5 +336,6 @@ juce::String encode(const juce::NamedValueSet& msg, const juce::NamedValueSet& o
     
     return rval;
 };
+} //end namespace V1
 } //end namespace PEM
 } //end namespace Forge

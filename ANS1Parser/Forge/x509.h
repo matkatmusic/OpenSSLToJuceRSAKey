@@ -897,7 +897,7 @@ namespace V2
 template<typename KeyType>
 KeyType publicKeyFromPem(juce::String pem)
 {
-    auto decoded = Forge::Pem::V2::decode(pem); //this needs to return an array of NamedValueSet instances.
+    auto decoded = Forge::PEM::V2::decode(pem); //this needs to return an array of NamedValueSet instances.
     if( std::distance(decoded.begin(), decoded.end()) == 0 )
     {
         jassertfalse;
@@ -933,10 +933,10 @@ KeyType publicKeyFromPem(juce::String pem)
     jassert(bodyPtr->isBinaryData());
     auto body = *bodyPtr->getBinaryData();
 //    auto obj = Forge::ASN1::fromDer<Forge::ASN1::ASNObject>(msg.body);
-    auto obj = Forge::ASN1::V2::fromDer(body, {});//this function should take a memory block
+    auto obj = Forge::ASN1::V2::fromDer(body, {});// this returns a juce::var
     
     //            return pki.publicKeyFromASN1(obj)
-    auto key = Forge::PKI::publicKeyFromASN1<KeyType>(obj); //this function should take a namedValueSet
+    auto key = Forge::PKI::V2::publicKeyFromASN1<KeyType>(obj); //this function should take a namedValueSet
     jassert(key.isValid());
     return key;
 }
@@ -947,7 +947,7 @@ template<typename KeyType, typename PemType>
 KeyType publicKeyFromPem(const PemType& pem)
 {
 //    var msg = forge.pem.decode(pem)[0];
-    auto decoded = Forge::Pem::V1::decode<juce::Array<Forge::Pem::V1::Msg>>(pem);
+    auto decoded = Forge::PEM::V1::decode<juce::Array<Forge::PEM::V1::Msg>>(pem);
     
     if( std::distance(decoded.begin(), decoded.end()) == 0 )
     {
@@ -988,7 +988,7 @@ KeyType publicKeyFromPem(const PemType& pem)
     
     //            return pki.publicKeyFromASN1(obj)
 //    auto key = Forge::PKI::publicKeyFromASN1(obj);
-    auto key = Forge::PKI::publicKeyFromASN1<KeyType>(obj);
+    auto key = Forge::PKI::V1::publicKeyFromASN1<KeyType>(obj);
     jassert(key.isValid());
     return key;
 }
@@ -1027,7 +1027,7 @@ PEMType publicKeyToPem(const KeyType& key, int maxLine = 64)
     msg.set("body", derMemBlock);
     using NV = juce::NamedValueSet::NamedValue;
     auto options = juce::NamedValueSet({NV("maxLine", maxLine)});
-    auto pem = Forge::PEM::encode(msg, options);
+    auto pem = Forge::PEM::V1::encode(msg, options);
     return pem;
 //  return forge.pem.encode(msg, {maxline: maxline});
 };
