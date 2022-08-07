@@ -232,8 +232,10 @@ ArrayType decode(const StringType& pemString)
     ArrayType rval;
     //  var rval = [];
     StringType str = pemString;
+#if false
     DBG(pemString);
     DBG("");
+#endif
     // split string into PEM messages (be lenient w/EOF on BEGIN line)
 //    var rMessage = /\s*-----BEGIN ([A-Z0-9- ]+)-----\r?\n?([\x21-\x7e\s]+?(?:\r?\n\r?\n))?([:A-Za-z0-9+\/=\s]+?)-----END \1-----/g;
     auto rMessage = juce::String(R"REGEX(\s*-----BEGIN ([A-Z0-9- ]+)-----\r?\n?([\x21-\x7e\s]+?(?:\r?\n\r?\n))?([:A-Za-z0-9+\/=\s]+?)-----END \1-----)REGEX");

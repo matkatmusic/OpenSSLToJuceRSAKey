@@ -1490,6 +1490,229 @@ namespace Forge
 namespace PKI
 {
 
+struct JSBigIntData
+{
+    std::vector<juce::int32> values;
+    bool empty() const { return values.empty(); }
+    size_t size() const { return values.size(); }
+    juce::int32& operator[](size_t idx)
+    {
+        if( juce::isPositiveAndBelow(idx, values.size()) )
+            return values[idx];
+        
+        while( idx >= values.size() )
+        {
+            values.push_back(0);
+        }
+        
+        return values[idx];
+    }
+    juce::int32 operator[](size_t idx) const
+    {
+        if( juce::isPositiveAndBelow(idx, values.size()) )
+            return values[idx];
+        
+        return -1;
+    }
+    
+};
+struct JSBigInt
+{
+    int s = 0;
+    int t = 0;
+    JSBigIntData data;
+    
+//        if(typeof(navigator) === 'undefined')
+//        {
+//           BigInteger.prototype.am = am3;
+//           dbits = 28;
+    //BigInteger.prototype.DM = ((1<<dbits)-1);
+    static constexpr juce::uint32 dbits = 28;
+    //BigInteger.prototype.DB = dbits;
+    static constexpr juce::uint32 DB = dbits;
+    static constexpr juce::uint32 DM = ((1 << dbits) - 1);
+    //BigInteger.prototype.DV = (1<<dbits);
+    static constexpr juce::uint32 DV = (1 << dbits);
+    
+    void fromInt(int x)
+    {
+        this->t = 1;
+        this->s = (x < 0) ? -1 : 0;
+        if(x > 0) this->data[0] = x;
+        else if(x < -1) this->data[0] = x + this->DV;
+        else this->t = 0;
+    }
+    
+    // return bigint initialized to value
+//    function nbv(i) { var r = nbi(); r.fromInt(i); return r; }
+    static JSBigInt nbv(int i)
+    {
+        JSBigInt r;
+        r.fromInt(i);
+        return r;
+    }
+    
+    static inline const JSBigIntData& getBI_RC()
+    {
+//            var BI_RC = new Array();
+        static JSBigIntData BI_RC;
+        if( BI_RC.empty() )
+        {
+//                var rr,vv;
+//                rr = "0".charCodeAt(0);
+            juce::uint8 rr = '0';
+            juce::uint8 vv;
+            for(vv = 0; vv <= 9; ++vv) BI_RC[rr++] = vv;
+//                rr = "a".charCodeAt(0);
+            rr = 'a';
+            for(vv = 10; vv < 36; ++vv) BI_RC[rr++] = vv;
+//                rr = "A".charCodeAt(0);
+            rr = 'A';
+            for(vv = 10; vv < 36; ++vv) BI_RC[rr++] = vv;
+        }
+        
+        return BI_RC;
+    }
+    
+    int intAt(juce::String s, int i)
+    {
+//            var c = BI_RC[s.charCodeAt(i)];
+//            return (c==null)?-1:c;
+        if( i < s.length() - 1)
+        {
+            auto idx = s[i]; //String::operator[] returns a juce_wchar
+            const auto& BI_RC = getBI_RC();
+            if( juce::isPositiveAndBelow(idx, BI_RC.size()) )
+            {
+                return BI_RC[idx];
+            }
+        }
+        
+        return -1;
+    }
+    
+    void clamp()
+    {
+        juce::uint32 c = s & DM;
+        while(t > 0 && data[t - 1] == c)
+            --t;
+    }
+    
+    void fromString(juce::String s, int b)
+    {
+        int k;
+        if(b == 16) k = 4;
+        else if(b == 8) k = 3;
+        else if(b == 256) k = 8; // byte array
+        else if(b == 2) k = 1;
+        else if(b == 32) k = 5;
+        else if(b == 4) k = 2;
+        else
+        {
+            jassertfalse;
+//                fromRadix(s,b);
+            return;
+        }
+        this->t = 0;
+        this->s = 0;
+//            var i = s.length, mi = false, sh = 0;
+        int i = s.length();
+        bool mi = false;
+        int sh = 0;
+        while(--i >= 0)
+        {
+//                var x = (k == 8) ? s[i] & 0xff : intAt(s,i);
+            int x = (k == 8) ? s.substring(i, 1).getIntValue() & 0xFF : intAt(s, i);
+            if(x < 0)
+            {
+//                    if(s.charAt(i) == "-")
+                if( s.substring(i, 1) == "-")
+                    mi = true;
+                continue;
+            }
+            
+            mi = false;
+            if(sh == 0)
+            {
+                this->data[this->t++] = x;
+            }
+            else if(sh + k > this->DB)
+            {
+                this->data[this->t - 1] |= (x & ((1 << (this->DB - sh)) - 1)) << sh;
+                this->data[this->t++] = (x >> (this->DB - sh));
+            }
+            else
+            {
+                this->data[this->t - 1] |= x << sh;
+            }
+            sh += k;
+            if(sh >= this->DB)
+                sh -= this->DB;
+        }
+        if(k == 8 && (s[0] & 0x80) != 0)
+        {
+            this->s = -1;
+            if(sh > 0)
+                this->data[this->t - 1] |= ((1 << (this->DB - sh)) - 1) << sh;
+        }
+        this->clamp();
+        if(mi)
+        {
+//            BigInteger.ZERO.subTo(this,this);
+            ZERO().subTo(*this, *this);
+        }
+    }
+    
+    static JSBigInt ZERO()
+    {
+        static JSBigInt z = nbv(0);
+        return z;
+    }
+    
+    void subTo(const JSBigInt& a, JSBigInt& r)
+    {
+//            var i = 0, c = 0, m = Math.min(a.t, this->t);
+        int i = 0;
+        int c = 0;
+        int m = juce::jmin(a.t, this->t);
+        while(i < m)
+        {
+            c += this->data[i] - a.data[i];
+            r.data[i++] = c & this->DM;
+            c >>= this->DB;
+        }
+        if(a.t < this->t)
+        {
+            c -= a.s;
+            while(i < this->t)
+            {
+                c += this->data[i];
+                r.data[i++] = c & this->DM;
+                c >>= this->DB;
+            }
+            c += this->s;
+        }
+        else
+        {
+            c += this->s;
+            while(i < a.t)
+            {
+                c -= a.data[i];
+                r.data[i++] = c & this->DM;
+                c >>= this->DB;
+            }
+            c -= a.s;
+        }
+        r.s = (c < 0) ? -1 : 0;
+        if(c < -1)
+            r.data[i++] = this->DV + c;
+        else if(c > 0)
+            r.data[i++] = c;
+        r.t = i;
+        r.clamp();
+    }
+};
+
 template<typename T, typename U>
 struct IsReferenceCountedType : std::false_type { };
 
@@ -1602,7 +1825,23 @@ ReturnType publicKeyFromASN1(ASNType obj)
         return {};
     }
 //    obj = Forge::ASN1::ASNObject::fromVar(data);
-    n.loadFromMemoryBlock( *data.getBinaryData() );
+    auto nblock = *data.getBinaryData();
+
+//    //switch endianness
+//    for( int i = 0; i < nblock.getSize(); ++i )
+//    {
+//        juce::uint32 v = nblock.getBitRange(i * 32, 32);
+//        v = juce::ByteOrder::swap(v);
+//        nblock.setBitRange(i * 32, 32, v);
+//    }
+//    auto b64 = nblock.toBase64Encoding();
+    auto hex = juce::String::toHexString(nblock.getData(), nblock.getSize());
+//    n.loadFromMemoryBlock( nblock );
+    
+    auto jsBigInt = JSBigInt();
+    jsBigInt.fromString(hex, 16);
+    
+    n.parseString(hex, 16);
     
     data = capture->get("publicKeyExponent");
     jassert(data != juce::var() );
@@ -1612,8 +1851,32 @@ ReturnType publicKeyFromASN1(ASNType obj)
         jassertfalse;
         return {};
     }
+    
+//    auto& modulusMemBlock = *data.getBinaryData();
+//
+//    for( int i = 0; i < modulusMemBlock.getSize(); ++i )
+//    {
+//        DBG( "[" << i << "]: " << modulusMemBlock.getBitRange(i*8, 8) );
+//    }
+    
 //    obj = Forge::ASN1::ASNObject::fromVar(data);
     e.loadFromMemoryBlock(*data.getBinaryData());
+#if false
+    for( int i = 0; i < n.getHighestBit(); i += sizeof(juce::uint32)*8)
+    {
+        int index = i / (sizeof(juce::uint32)*8);
+        juce::uint32 val = n.getBitRangeAsInt(i, sizeof(juce::uint32)*8);
+        DBG("[" << index << "]: " << juce::String(val) << " [" << std::bitset<sizeof(juce::uint32)*8>(val).to_string() << "]" );
+    }
+#endif
+    for( size_t i = 0; i < jsBigInt.data.values.size(); ++i )
+    {
+        juce::uint32 val = static_cast<juce::uint32>(jsBigInt.data[i]);
+        DBG("[" <<  i << "]: " << juce::String(val) << " [" << std::bitset<sizeof(juce::uint32)*8>(val).to_string() << "]" );
+    }
+    
+    jassertfalse;
+    
     auto key = ReturnType(n.toString(16) + "," + e.toString(16));
     if(key.isValid())
         return key;
@@ -1778,13 +2041,13 @@ ASN1::ASNObject::Ptr publicKeyToRSAPublicKey(KeyType key)
                                                  ASN1::Type::INTEGER,
                                                  false,
                                                  {},    //no object list
-                                                 key.getPart1().toMemoryBlock(),
+                                                 key.getModulus().toMemoryBlock(),
                                                  {});   //no options
     auto exponent = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                   ASN1::Type::INTEGER,
                                                   false,
                                                   {},   //no object list
-                                                  key.getPart2().toMemoryBlock(),
+                                                  key.getExponent().toMemoryBlock(),
                                                   {});  //no options
     auto rsaPublicKey = ASN1::create<ASN1::ASNObject>(ASN1::Class::UNIVERSAL,
                                                       ASN1::Type::SEQUENCE,

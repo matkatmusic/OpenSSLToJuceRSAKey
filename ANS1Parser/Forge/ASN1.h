@@ -1100,9 +1100,20 @@ typename ASNType::Ptr fromDer(const juce::MemoryBlock& bytes, ParseOptions optio
     
     juce::MemoryInputStream byteStream(bytes, false);
     auto len = byteStream.getNumBytesRemaining();
+//    for( int i = 0; i < bytes.getSize(); ++i )
+//    {
+//        DBG( "[" << i << "]: " << bytes.getBitRange(i*8, 8) );
+//    }
 //    var value = _fromDer(bytes, bytes.length(), 0, options);
     auto value = _fromDer<ASNType>(byteStream, len, 0, options);
 //    if(options.parseAllBytes && bytes.length() !== 0) {
+//    auto& modulusMemBlock = value->objectList[1]->objectList[0]->objectList[0]->byteArray;
+//
+//    for( int i = 0; i < modulusMemBlock.getSize(); ++i )
+//    {
+//        DBG( "[" << i << "]: " << modulusMemBlock.getBitRange(i*8, 8) );
+//    }
+    
     if( options.parseAllBytes && !byteStream.isExhausted() )
     {
 //      var error = new Error('Unparsed DER bytes remain after ASN.1 parsing.');
