@@ -228,7 +228,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
                    (tc == ASN1::Class::UNIVERSAL || tc == ASN1::Class::CONTEXT_SPECIFIC))
                 {
 //                    value = [composed];
-                    value = {composed};
+                    value = juce::Array<juce::var>{composed};
                 }
             }
 //            catch(ex)
@@ -343,6 +343,7 @@ juce::var create(Class tagClass,
         obj->setProperty("bitStringContents", options["bitStringContents"]);
         // TODO: add readonly flag to avoid this overhead
         // save copy to detect changes
+        DBG( juce::JSON::toString(obj.get()));
         obj->setProperty("original", copy(juce::var(obj.get()), {}));
     }
     
@@ -378,6 +379,9 @@ juce::var copy(const juce::var& obj, juce::NamedValueSet options)
         return {};
     }
     
+    DBG ("\n\ncopying object: " );
+    DBG( juce::JSON::toString(obj));
+    //TODO: compare the JSON output to what is shown in JS
     /*
      This copy step has some issues. Sometimes object is of type void. Sometimes object is type binary.
      the line:
@@ -385,7 +389,7 @@ juce::var copy(const juce::var& obj, juce::NamedValueSet options)
      is the culprit here.
      
      I think there is a juce::JSON function taht lets me print out the way the juce::var object is currently structed.
-     This would let me inspect how it is laid out, and see if it is lined up with the javascript version. 
+     This would let me inspect how it is laid out, and see if it is lined up with the javascript version.
      */
     
     juce::DynamicObject::Ptr data = new juce::DynamicObject();
