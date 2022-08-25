@@ -1010,6 +1010,35 @@ namespace Forge
 {
 namespace PKI
 {
+namespace V2
+{
+template<typename KeyType>
+juce::String publicKeyToPem(const KeyType& key, int maxLine = 64)
+{
+//    pki.publicKeyToPem = function(key, maxline) {
+//      // convert to ASN.1, then DER, then PEM-encode
+//      var msg = {
+//        type: 'PUBLIC KEY',
+//        body: asn1.toDer(pki.publicKeyToAsn1(key)).getBytes()
+//      };
+//      return forge.pem.encode(msg, {maxline: maxline});
+//    };
+    juce::var msg (new juce::DynamicObject() );
+    auto* msgdo = msg.getDynamicObject();
+    msgdo->setProperty("type", "PUBLIC KEY");
+    auto asn1 = Forge::PKI::V2::publicKeyToAsn1(key); //this should return a juce;:var
+    auto der = Forge::ASN1::V2::toDer(asn1); //this should return a var(memoryBlock)
+    auto derBytes = *der.getBinaryData();
+    msgdo->setProperty("body", derBytes);
+    using NV = juce::NamedValueSet::NamedValue;
+    auto options = juce::NamedValueSet({NV("maxLine", maxLine)});
+    auto pem = Forge::PEM::V2::encode(msg, options);
+    
+    return pem;
+}
+} //end namespace V2
+namespace V1
+{
 //pki.publicKeyToPem = function(key, maxline) {
 template<typename PEMType, typename KeyType>
 PEMType publicKeyToPem(const KeyType& key, int maxLine = 64)
@@ -1022,7 +1051,7 @@ PEMType publicKeyToPem(const KeyType& key, int maxLine = 64)
     juce::NamedValueSet msg;
     msg.set("type", "PUBLIC KEY");
 //    auto asn1 = Forge::PKI::publicKeyToAsn1(key);
-    auto asn1 = Forge::PKI::publicKeyToAsn1<ASN1::V1::ASNObject::Ptr>(key);
+    auto asn1 = Forge::PKI::V1::publicKeyToAsn1<ASN1::V1::ASNObject::Ptr>(key);
     auto derMemBlock = Forge::ASN1::V1::toDer(asn1);
     msg.set("body", derMemBlock);
     using NV = juce::NamedValueSet::NamedValue;
@@ -1031,6 +1060,7 @@ PEMType publicKeyToPem(const KeyType& key, int maxLine = 64)
     return pem;
 //  return forge.pem.encode(msg, {maxline: maxline});
 };
+} //end namespace V1
 } //end namespace PKI
 }//end namespace Forge
 #if false

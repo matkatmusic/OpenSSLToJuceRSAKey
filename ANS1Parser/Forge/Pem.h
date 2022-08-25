@@ -55,6 +55,10 @@ namespace Forge
 {
 namespace PEM
 {
+namespace V2
+{
+juce::String encode(const juce::var& msg, const juce::NamedValueSet& options);
+}
 namespace V1
 {
 /**

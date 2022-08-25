@@ -701,6 +701,10 @@ namespace Forge
 {
 namespace ASN1
 {
+namespace V2
+{
+
+} //end namespace V2
 namespace V1
 {
 struct Capture : juce::ReferenceCountedObject
@@ -1353,6 +1357,11 @@ namespace Forge
 {
 namespace ASN1
 {
+namespace V2
+{
+juce::var toDer(const juce::var& obj);
+
+}
 namespace V1
 {
 /**
