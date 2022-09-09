@@ -932,6 +932,10 @@ KeyType publicKeyFromPem(juce::String pem)
     auto bodyPtr = msg.getVarPointer("body");
     jassert(bodyPtr->isBinaryData());
     auto body = *bodyPtr->getBinaryData();
+//    console.log("message body length: " );
+    DBG( "message body length: " );
+//    console.log(msg.body.length);
+    DBG( body.getSize() );
 //    auto obj = Forge::ASN1::fromDer<Forge::ASN1::ASNObject>(msg.body);
     auto obj = Forge::ASN1::V2::fromDer(body, {});// this returns a juce::var
     
