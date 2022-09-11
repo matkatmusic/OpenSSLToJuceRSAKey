@@ -12,6 +12,8 @@
 
 #include <JuceHeader.h>
 
+void varPrinter(const juce::var& value, juce::String name = "");
+
 /*
  a port of https://github.com/digitalbazaar/forge/blob/main/lib/asn1.js
  */

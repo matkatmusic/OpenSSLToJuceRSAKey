@@ -82,6 +82,20 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
     // minimum length for ASN.1 DER structure is 2
     V1::_checkBufferLength(bytes, remaining, 2);
     
+//    console.log("_fromDer( remaining: %d, depth: %d, bytes: )", remaining, depth );
+    DBG("_fromDer( remaining: " << remaining << ", depth: " << depth << ", bytes: )");
+//    var pos = bytes.read;
+    auto pos = bytes.getPosition();
+//    console.log(forge.util.binary.hex.encode(bytes.getBytes(remaining)));
+    {
+        juce::MemoryBlock mb(remaining);
+        juce::MemoryOutputStream mos(mb, false);
+        mos.writeFromInputStream(bytes, remaining);
+        mos.flush();
+        DBG( juce::String::toHexString(mb.getData(), mb.getSize(), 0) );
+    }
+//    bytes.read = pos;
+    bytes.setPosition(pos);
     // get the first byte
     juce::uint8 b1;
     auto numRead = bytes.read(&b1, 1);
@@ -291,6 +305,10 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
         }
     }
     
+//    console.log( "_fromDer() final 'value' before asn1.create():  " );
+    DBG( "_fromDer() final 'value' before asn1.create():" );
+//    if( forge.util.isArray(value) )
+    varPrinter(value);
     // add BIT STRING contents if available
     juce::NamedValueSet asn1Options;
     if(! bitStringContents.isEmpty() )
@@ -301,7 +319,85 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
     // create and return asn1 object
     return create(tagClass, type, constructed, value, asn1Options);
 }
+} //end namespace V2
+} //end namespace ASN1
+} //end namespace Forge
 
+void varPrinter(const juce::var& value, juce::String name)
+{
+    if( name.isNotEmpty() )
+        name << ": ";
+    
+    if( value.isArray() )
+    {
+        auto& arr = *value.getArray();
+        //      for( var i = 0; i < value.length; ++i )
+        for( int i = 0; i < arr.size(); ++i )
+        {
+            //            var elem = value[i];
+            auto& elem = arr.getReference(i);
+            //            console.log( `elem[${i}]:`);
+            DBG( "elem[" << i << "]:");
+            //            if( typeof elem === "object")
+            if( elem.isObject() )
+            {
+                //                for (const [key, v] of Object.entries(elem))
+                auto& obj = *elem.getDynamicObject();
+                auto props = obj.getProperties();
+                for( auto prop : props )
+                {
+                    const auto& key = prop.name.toString();
+                    const auto& v = prop.value;
+                    if( key == "value" || key == "bitStringContents" )
+                    {
+                        if( v.isBinaryData() )
+                        {
+                            auto data = *v.getBinaryData();
+                            //                        console.log( `${key}: ${forge.util.bytesToHex(v)}` );
+                            DBG( key << ": " << juce::String::toHexString(data.getData(), data.getSize(), 0));
+                        }
+                        else
+                        {
+                            varPrinter(v, key);
+                        }
+                    }
+                    else
+                    {
+                        varPrinter(v, key);
+                    }
+                }
+            }
+            else
+            {
+                //                console.log("not implemented yet");
+                DBG( "not implemented yet" );
+                jassertfalse; //TODO: figure out type of 'value'
+            }
+        }
+    }
+    else if( value.isBinaryData() )
+    {
+        //        console.log(forge.util.bytesToHex(value));
+        jassert(value.isBinaryData());
+        auto data = *value.getBinaryData();
+        DBG( name << juce::String::toHexString(data.getData(), data.getSize(), 0) );
+    }
+    else if( value.isBool() )
+    {
+        DBG( name << (static_cast<bool>(value) == true ? "true" : "false") );
+    }
+    else
+    {
+        DBG( name << value.toString() );
+    }
+}
+
+namespace Forge
+{
+namespace ASN1
+{
+namespace V2
+{
 juce::var create(Class tagClass,
                  Type type,
                  bool constructed,
