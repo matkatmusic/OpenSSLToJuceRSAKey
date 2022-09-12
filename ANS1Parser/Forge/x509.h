@@ -933,7 +933,7 @@ KeyType publicKeyFromPem(juce::String pem)
     jassert(bodyPtr->isBinaryData());
     auto body = *bodyPtr->getBinaryData();
 //    console.log("message body length: " );
-    DBG( "message body length: " );
+    DBG( "message body length:" );
 //    console.log(msg.body.length);
     DBG( body.getSize() );
 //    auto obj = Forge::ASN1::fromDer<Forge::ASN1::ASNObject>(msg.body);

@@ -84,9 +84,9 @@ juce::Array<juce::NamedValueSet> decode(const juce::String& pemString)
             type = "CERTIFICATE REQUEST";
         }
         
-#if false
+#if true
         DBG( regexMatch[3].length() );
-        DBG( regexMatch[3] );
+        DBG( regexMatch[3].trim() );
 #endif
         //remove all \r\n from msg.body
         auto base64Text = regexMatch[3];
