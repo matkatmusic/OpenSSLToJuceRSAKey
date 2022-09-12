@@ -157,6 +157,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
                     break;
                 }
                 start = bytes.getNumBytesRemaining();
+                DBG( "creating value from push(_fromDer()) with indefinite length");
                 value.append(_fromDer(bytes, remaining, depth + 1, options));
                 remaining -= start - bytes.getNumBytesRemaining();
             }
@@ -167,6 +168,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
             while(length > 0)
             {
                 start = bytes.getNumBytesRemaining();
+                DBG( "creating value from push(_fromDer()) with definite length");
                 value.append(_fromDer(bytes, length, depth + 1, options));
                 remaining -= start - bytes.getNumBytesRemaining();
                 length -= start - bytes.getNumBytesRemaining();
@@ -242,6 +244,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
                    (tc == ASN1::Class::UNIVERSAL || tc == ASN1::Class::CONTEXT_SPECIFIC))
                 {
 //                    value = [composed];
+                    DBG( "creating value = [composed];");
                     value = juce::Array<juce::var>{composed};
                 }
             }
@@ -276,6 +279,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
         if(type == ASN1::Type::BMPSTRING)
         {
             //value = ''; //an empty string
+            DBG( "creating value from String.fromCharCode(bytes.getInt16());");
             auto tempStr = juce::String();
             for(; length > 0; length -= 2)
             {
@@ -300,6 +304,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
                 mos.writeFromInputStream(bytes, length);
             }
 //            value = bytes.getBytes(length);
+            DBG( "creating value from bytes.getBytes(" << length << ")");
             value = mb;
             remaining -= length;
         }
@@ -327,68 +332,60 @@ void varPrinter(const juce::var& value, juce::String name)
 {
     if( name.isNotEmpty() )
         name << ": ";
-    
-    if( value.isArray() )
+
+    if( value.isArray() )//if( forge.util.isArray(value) )
     {
-        auto& arr = *value.getArray();
-        //      for( var i = 0; i < value.length; ++i )
-        for( int i = 0; i < arr.size(); ++i )
+        const auto& arr = *value.getArray();
+        for( int i = 0; i < arr.size(); ++i )//for( var i = 0; i < value.length; ++i )
         {
-            //            var elem = value[i];
-            auto& elem = arr.getReference(i);
-            //            console.log( `elem[${i}]:`);
-            DBG( "elem[" << i << "]:");
-            //            if( typeof elem === "object")
-            if( elem.isObject() )
+            auto elem = arr[i]; //var elem = value[i];
+            DBG( "elem[" << i << "]:" ); //console.log( `elem[${i}]:`);
+            if( elem.isObject() )// if( typeof elem === "object")
             {
-                //                for (const [key, v] of Object.entries(elem))
-                auto& obj = *elem.getDynamicObject();
-                auto props = obj.getProperties();
-                for( auto prop : props )
+                auto obj = elem.getDynamicObject();
+                const auto& props = obj->getProperties();
+                for( auto prop : props )//for (const [key, v] of Object.entries(elem))
                 {
                     const auto& key = prop.name.toString();
                     const auto& v = prop.value;
-                    if( key == "value" || key == "bitStringContents" )
+                    // if( key === "value" || key === "bitStringContents" )
                     {
-                        if( v.isBinaryData() )
-                        {
-                            auto data = *v.getBinaryData();
-                            //                        console.log( `${key}: ${forge.util.bytesToHex(v)}` );
-                            DBG( key << ": " << juce::String::toHexString(data.getData(), data.getSize(), 0));
-                        }
-                        else
-                        {
-                            varPrinter(v, key);
-                        }
-                    }
-                    else
-                    {
+                        // console.log( `${key}: ${forge.util.bytesToHex(v)}` );
                         varPrinter(v, key);
+                    }
+                    // else
+                    {
+                        // console.log(`${key}: ${v}`);
                     }
                 }
             }
             else
             {
-                //                console.log("not implemented yet");
-                DBG( "not implemented yet" );
-                jassertfalse; //TODO: figure out type of 'value'
+                DBG("not implemented yet");
             }
         }
     }
+    else if( value.isBool() )//else if( typeof value === "bool" )
+    {
+//        console.log(name, (value === true ? "true" : "false") );
+        DBG( name << (static_cast<bool>(value) == true ? "true" : "false" ) );
+    }
+    else if( value.isString() )//else if( typeof value === "string")
+    {
+//        console.log(name, forge.util.bytesToHex(value));
+        auto str = value.toString();
+        juce::MemoryBlock mb(str.getCharPointer(), str.length());
+        DBG( name << juce::String::toHexString(mb.getData(), mb.getSize(), 0));
+    }
     else if( value.isBinaryData() )
     {
-        //        console.log(forge.util.bytesToHex(value));
-        jassert(value.isBinaryData());
         auto data = *value.getBinaryData();
-        DBG( name << juce::String::toHexString(data.getData(), data.getSize(), 0) );
-    }
-    else if( value.isBool() )
-    {
-        DBG( name << (static_cast<bool>(value) == true ? "true" : "false") );
+        DBG( name << juce::String::toHexString(data.getData(), data.getSize(), 0));
     }
     else
     {
-        DBG( name << value.toString() );
+        DBG("'value' has unhandled type");
+        DBG(name << value.toString());
     }
 }
 
