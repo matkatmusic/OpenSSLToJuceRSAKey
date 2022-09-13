@@ -810,7 +810,7 @@ juce::MemoryBlock oidToDer(juce::String oid)
     bytes.flush();
     DBG( "OID bytes: " << juce::String::toHexString(block.getData(), block.getSize(), 0));
     return block;
-};
+}
 } //end namespace V1
 
 namespace V2
@@ -956,14 +956,14 @@ juce::var toDer(const juce::var& obj)
             {
                 const auto bd = *obj["value"].getBinaryData();
                 
-                if( obj["type"].equalsWithSameType(static_cast<int>(ASN1::Type::INTEGER)) &&
-                   bd.getSize() > 1 &&
-                   // leading 0x00 for positive integer
-                   ((bd[0] == 0 &&
-                     (bd[1] & 0x80) == 0) ||
-                    // leading 0xFF for negative integer
-                    (static_cast<unsigned char>(bd[0]) == 0xFF &&
-                     (bd[1] & 0x80) == 0x80)))
+                if(obj["type"].equalsWithSameType(static_cast<int>( ASN1::Type::INTEGER)) &&    //if(obj.type === asn1.Type.INTEGER &&
+                   bd.getSize() > 1 &&                                                          //  obj.value.length > 1 &&
+                   // leading 0x00 for positive integer                                         //  // leading 0x00 for positive integer
+                   ((static_cast<juce::uint8>(bd[0]) == 0 &&                                    //  ((obj.value.charCodeAt(0) === 0 &&
+                     (static_cast<juce::uint8>(bd[1]) & 0x80) == 0) ||                          //  (obj.value.charCodeAt(1) & 0x80) === 0) ||
+                    // leading 0xFF for negative integer                                        //  // leading 0xFF for negative integer
+                    (static_cast<juce::uint8>(bd[0]) == 0xFF &&                                 //  (obj.value.charCodeAt(0) === 0xFF &&
+                     (static_cast<juce::uint8>(bd[1]) & 0x80) == 0x80)))                        //  (obj.value.charCodeAt(1) & 0x80) === 0x80)))
                 {
                     jassert(obj["value"].isBinaryData());
                     
@@ -972,7 +972,6 @@ juce::var toDer(const juce::var& obj)
                         jassertfalse;
                         return {};
                     }
-                    
                     
                     //                value.putBytes(obj.value.substr(1));
                     juce::MemoryInputStream mis(bd, false);
