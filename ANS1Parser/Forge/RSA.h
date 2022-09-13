@@ -1946,20 +1946,31 @@ ReturnType publicKeyFromASN1(juce::var obj)
     jassert(capture.hasProperty("publicKeyModulus"));
     jassert(capture["publicKeyModulus"].isBinaryData());
     const auto& modMB = *capture["publicKeyModulus"].getBinaryData();
-    auto n = juce::String::toHexString(modMB.getData(), modMB.getSize());
-    n = n.removeCharacters(" "); //remove any spaces
+    auto n = juce::String::toHexString(modMB.getData(), modMB.getSize(), 0);
     
     jassert(capture.hasProperty("publicKeyExponent"));
     jassert(capture["publicKeyExponent"].isBinaryData());
     const auto& expMB = *capture["publicKeyExponent"].getBinaryData();
-    auto e = juce::String::toHexString(expMB.getData(), expMB.getSize());
-    e = e.removeCharacters(" "); //remove any spaces
+    auto e = juce::String::toHexString(expMB.getData(), expMB.getSize(), 0);
+    
+    DBG( "n: " << n );
+    DBG( "e: " << e );
     // set public key
     auto nbi = juce::BigInteger();
     nbi.parseString(n, 16);
     
     auto ebi = juce::BigInteger();
     ebi.parseString(e, 16);
+    
+#if false
+    constexpr int bitIncrement = sizeof(juce::uint32) * 8;
+    for( int i = 0; i < nbi.getHighestBit(); i += bitIncrement)
+    {
+        int index = i / (bitIncrement);
+        juce::uint32 val = nbi.getBitRangeAsInt(i, bitIncrement);
+        DBG("[" << index << "]: " << juce::String(val) << " [" << std::bitset<bitIncrement>(val).to_string() << "]" );
+    }
+#endif
     
     return ReturnType(nbi.toString(16) + "," + ebi.toString(16));
 //    return pki.setRsaPublicKey(
