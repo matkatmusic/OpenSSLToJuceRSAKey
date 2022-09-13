@@ -11,6 +11,56 @@
 #include "RSA.h"
 namespace Forge
 {
+namespace PKI
+{
+namespace V2
+{
+/**
+ * Converts a positive BigInteger into 2's-complement big-endian bytes.
+ *
+ * @param b the big integer to convert.
+ *
+ * @return the bytes.
+ */
+juce::MemoryBlock _bnToBytes(const juce::BigInteger& b)
+{
+    auto mb = b.toMemoryBlock();
+    
+    juce::MemoryBlock output;
+    
+    {
+        juce::MemoryOutputStream mos(output, false);
+        
+        for(int i = mb.getSize() - 1; i >= 0; --i )
+        {
+            mos.writeByte(mb[i]); //write to output in Big-Endian (aka reversed) order
+        }
+    } //mos goes out of scope, calls 'flush()', finishing the write operation to 'output'
+
+    auto hex = juce::String::toHexString(output.getData(), output.getSize(), 0);
+    if( static_cast<juce::uint8>(output[0]) >= 0x80 )
+    {
+        hex = "00" + hex;
+        //insert the 00 at the beginning of `output`
+        decltype(output) tempMemBlock;
+        {
+            juce::MemoryOutputStream mos(tempMemBlock, false);
+            mos.writeByte(0);
+        } //mos goes out of scope, calls 'flush()', finishing the write operation to 'tempMemBlock'
+        
+        //add all of 'output' to tempMemBlock
+        tempMemBlock.append(output.getData(), output.getSize());
+        
+        //replace output with tempMemBlock
+        output = tempMemBlock;
+    }
+    
+    DBG( "hex: " << hex );
+    
+    return output;
+}
+} //end namespace V2
+} //end namespace PKI
 namespace RSA
 {
 namespace V2

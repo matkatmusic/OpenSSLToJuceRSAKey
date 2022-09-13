@@ -2041,59 +2041,85 @@ juce::var publicKeyToAsn1(const KeyType& key)
         jassertfalse;
         return {};
     }
-    auto algorithmOIDasDerByteArray =  ASN1::V1::oidToDer(oid);
+
+    using namespace Forge::ASN1::V2;
+    using namespace Forge::PKI::V2;
     
-    auto asn1 = Forge::ASN1::V2::create(ASN1::Class::UNIVERSAL,
-                                        ASN1::Type::SEQUENCE,
-                                        true,
-                                        juce::Array<juce::var>
-                                        {
-        //algorithmIdentifier
-        Forge::ASN1::V2::create(ASN1::Class::UNIVERSAL,
-                                ASN1::Type::SEQUENCE,
-                                true,
-                                juce::Array<juce::var>
-                                {
-                                //algorithm,
-            Forge::ASN1::V2::create(ASN1::Class::UNIVERSAL, ASN1::Type::OID, false, algorithmOIDasDerByteArray, {}),
-                                //parameters (null)
-            Forge::ASN1::V2::create(ASN1::Class::UNIVERSAL, ASN1::Type::NULL_, false, juce::String(), {})
-            
-                                }, {}),
-        //subjectPublicKey
-        Forge::ASN1::V2::create(ASN1::Class::UNIVERSAL,
-                                ASN1::Type::BITSTRING,
-                                false,
-                                juce::Array<juce::var>
-                                {
-            Forge::PKI::V2::publicKeyToRSAPublicKey(key)}, {})
-                                },
-    {});
+    // SubjectPublicKeyInfo
+    auto asn1 = create(ASN1::Class::UNIVERSAL,
+                       ASN1::Type::SEQUENCE,
+                       true,
+                       juce::Array<juce::var>
+                       {
+        // AlgorithmIdentifier
+        create(ASN1::Class::UNIVERSAL,
+               ASN1::Type::SEQUENCE,
+               true,
+               juce::Array<juce::var> {
+                // algorithm
+            create(ASN1::Class::UNIVERSAL,
+                   ASN1::Type::OID,
+                   false,
+                   ASN1::V1::oidToDer(oid)),
+          // parameters (null)
+            create(ASN1::Class::UNIVERSAL,
+                   ASN1::Type::NULL_,
+                   false,
+                   juce::var{})
+        }),
+        // subjectPublicKey
+        create(ASN1::Class::UNIVERSAL,
+               ASN1::Type::BITSTRING,
+               false,
+               juce::Array<juce::var>
+               {
+            publicKeyToRSAPublicKey(key)
+               })
+                       });
     
     return asn1;
 }
+
+juce::MemoryBlock _bnToBytes(const juce::BigInteger& b);
+
 template<typename KeyType>
 juce::var publicKeyToRSAPublicKey(const KeyType& key)
 {
 #if false
   // RSAPublicKey
-    return asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
-        // modulus (n)
-        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-                    _bnToBytes(key.n)),
-        // publicExponent (e)
-        asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-                    _bnToBytes(key.e))
+    return asn1.create(asn1.Class.UNIVERSAL,
+                       asn1.Type.SEQUENCE,
+                       true,
+                       [
+      // modulus (n)
+      asn1.create(asn1.Class.UNIVERSAL,
+                  asn1.Type.INTEGER,
+                  false,
+                  _bnToBytes(key.n)),
+      // publicExponent (e)
+      asn1.create(asn1.Class.UNIVERSAL,
+                  asn1.Type.INTEGER,
+                  false,
+                  _bnToBytes(key.e))
     ]);
 #endif
-    
-    return ASN1::V2::create(ASN1::Class::UNIVERSAL, ASN1::Type::SEQUENCE, true, juce::Array<juce::var>
-                            {
-        //modulus (n)
-        ASN1::V2::create(ASN1::Class::UNIVERSAL, ASN1::Type::INTEGER, false, key.getModulus().toMemoryBlock(), {}),
-        //public exponent (e)
-        ASN1::V2::create(ASN1::Class::UNIVERSAL, ASN1::Type::INTEGER, false, key.getExponent().toMemoryBlock(), {})
-    }, {});
+    using namespace Forge::ASN1::V2;
+    return create(ASN1::Class::UNIVERSAL,
+                  ASN1::Type::SEQUENCE,
+                  true,
+                  juce::Array<juce::var>
+                  {
+      // modulus (n)
+      create(ASN1::Class::UNIVERSAL,
+             ASN1::Type::INTEGER,
+                  false,
+                  _bnToBytes(key.getModulus())),
+      // publicExponent (e)
+      create(ASN1::Class::UNIVERSAL,
+             ASN1::Type::INTEGER,
+                  false,
+                  _bnToBytes(key.getExponent()))
+                 });
 }
 } //end namespace V2
 namespace V1
