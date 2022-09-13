@@ -815,48 +815,49 @@ juce::var toDer(const juce::var& obj)
         // if composed, use each child asn1 object's DER bytes as value
         // turn on 6th bit (0x20 = 32) to indicate asn1 is constructed
         // from other asn1 objects
-//        if(obj.constructed)
-        if( obj.hasProperty("constructed") && obj["constructed"].equalsWithSameType(true))
+        if( obj.hasProperty("constructed") &&
+           obj["constructed"].equalsWithSameType(true) ) //if(obj.constructed) {
         {
             b1 |= 0x20;
         }
         else
         {
             // type is a bit string, add unused bits of 0x00
-//            value.putByte(0x00);
-            value.writeByte(0x00);
+            value.writeByte(0x00); //value.putByte(0x00);
         }
-        
+#if false
         // add all of the child DER bytes together
+        for(var i = 0; i < obj.value.length; ++i) {
+          if(obj.value[i] !== undefined)
+          {
+            var der = asn1.toDer(obj.value[i]);
+            //Figure out how to print out the DER as base64 string and compare with C++ base64 strings
+            console.log("ASN1::toDer(varToAdd:");
+            console.log(der.toHex());
+            value.putBuffer(der);
+          }
+        }
+#endif
+        jassert(obj.hasProperty("value"));
+        jassert(obj["value"].isArray());
         if( obj.hasProperty("value") && obj["value"].isArray() )
         {
-            auto& arr = *obj["value"].getArray();
+            const auto& arr = *obj["value"].getArray();
             for( int i = 0; i < arr.size(); ++i )
             {
-                if( ! arr[i].isUndefined() )
+                if(! arr[i].isUndefined() )
                 {
-                    auto varToAdd = ASN1::V2::toDer(arr[i]);
-                    jassert(varToAdd.isBinaryData());
-                    auto memoryBlockToAdd = *varToAdd.getBinaryData();
-                    DBG( "" );
-                    DBG( "ASN1::toDer(varToAdd: " );
+                    auto der = ASN1::V2::toDer(arr[i]);
+                    jassert(der.isBinaryData());
+                    auto memoryBlockToAdd = *der.getBinaryData();
+                    DBG( "ASN1::toDer(varToAdd:" );
                     DBG( juce::String::toHexString(memoryBlockToAdd.getData(), memoryBlockToAdd.getSize(), 0));
-//                    DBG( juce::Base64::toBase64(memoryBlockToAdd.getData(), memoryBlockToAdd.getSize()));
                     auto mis = juce::MemoryInputStream(memoryBlockToAdd, false);
                     value.writeFromInputStream(mis,
                                                mis.getNumBytesRemaining());
                 }
             }
         }
-#if false
-        for(var i = 0; i < obj.value.length; ++i)
-        {
-            if(obj.value[i] !== undefined)
-            {
-                value.putBuffer(asn1.toDer(obj.value[i]));
-            }
-        }
-#endif
     }
     else
     {
@@ -864,6 +865,12 @@ juce::var toDer(const juce::var& obj)
 //        if(obj.type === asn1.Type.BMPSTRING)
         if( obj.hasProperty("type") && obj["type"].equalsWithSameType(static_cast<int>(ASN1::Type::BMPSTRING)))
         {
+            jassertfalse; //this if() is not hit in the javascript for the PEM file we're working with
+#if false
+            for(var i = 0; i < obj.value.length; ++i) {
+              value.putInt16(obj.value.charCodeAt(i));
+            }
+#endif
             jassert(obj["value"].isBinaryData());
             auto mb = *obj["value"].getBinaryData();
             
@@ -877,61 +884,66 @@ juce::var toDer(const juce::var& obj)
                 auto shValue = mis.readShortBigEndian();
                 value.writeShortBigEndian( shValue );
             }
-#if false
-            for(var i = 0; i < obj.value.length; ++i)
-            {
-                value.putInt16(obj.value.charCodeAt(i));
-            }
-#endif
         }
         else
         {
+#if false
             // ensure integer is minimally-encoded
             // TODO: should all leading bytes be stripped vs just one?
             // .. ex '00 00 01' => '01'?
-//            if(obj.type === asn1.Type.INTEGER &&
-            if( obj["type"].equalsWithSameType(static_cast<int>(ASN1::Type::INTEGER)) &&
-//               obj.value.length > 1 &&
-               obj["value"].getBinaryData()->getSize() > 1 &&
-               // leading 0x00 for positive integer
-//               ((obj.value.charCodeAt(0) === 0 &&
-               ((obj["value"].getBinaryData()->operator[](0) == 0 &&
-//                 (obj.value.charCodeAt(1) & 0x80) === 0) ||
-                 (obj["value"].getBinaryData()->operator[](1) & 0x80) == 0) ||
-                // leading 0xFF for negative integer
-//                (obj.value.charCodeAt(0) === 0xFF &&
-                (static_cast<unsigned char>(obj["value"].getBinaryData()->operator[](0)) == 0xFF &&
-//                 (obj.value.charCodeAt(1) & 0x80) === 0x80)))
-                 (obj["value"].getBinaryData()->operator[](1) & 0x80) == 0x80)))
-            {
-//                value.putBytes(obj.value.substr(1));
-                jassert(obj.hasProperty("value"));
-                jassert(obj["value"].isBinaryData());
-                auto mb = *obj["value"].getBinaryData();
-                juce::MemoryInputStream mis(mb, false);
-                mis.readByte();
-                value.writeFromInputStream(mis, mis.getNumBytesRemaining());
+            if(obj.type === asn1.Type.INTEGER &&
+              obj.value.length > 1 &&
+              // leading 0x00 for positive integer
+              ((obj.value.charCodeAt(0) === 0 &&
+              (obj.value.charCodeAt(1) & 0x80) === 0) ||
+              // leading 0xFF for negative integer
+              (obj.value.charCodeAt(0) === 0xFF &&
+              (obj.value.charCodeAt(1) & 0x80) === 0x80))) {
+              value.putBytes(obj.value.substr(1));
+            } else {
+              value.putBytes(obj.value);
             }
-            else
+#endif
+            jassert(obj.hasProperty("value"));
+            
+            if( obj["value"].isBinaryData() )
             {
-//                value.putBytes(obj.value);
-                jassert(obj.hasProperty("value"));
-                if( obj["value"].isBinaryData() )
+                const auto bd = *obj["value"].getBinaryData();
+                
+                if( obj["type"].equalsWithSameType(static_cast<int>(ASN1::Type::INTEGER)) &&
+                   bd.getSize() > 1 &&
+                   // leading 0x00 for positive integer
+                   ((bd[0] == 0 &&
+                     (bd[1] & 0x80) == 0) ||
+                    // leading 0xFF for negative integer
+                    (static_cast<unsigned char>(bd[0]) == 0xFF &&
+                     (bd[1] & 0x80) == 0x80)))
                 {
-                    auto mb = *obj["value"].getBinaryData();
-                    juce::MemoryInputStream mis(mb, false);
+                    jassert(obj["value"].isBinaryData());
+                    
+                    if(! obj["value"].isBinaryData() )
+                    {
+                        jassertfalse;
+                        return {};
+                    }
+                    
+                    
+                    //                value.putBytes(obj.value.substr(1));
+                    juce::MemoryInputStream mis(bd, false);
+                    mis.readByte(); //this advances the read position by 1
                     value.writeFromInputStream(mis, mis.getNumBytesRemaining());
-                }
-                else if( obj["value"].isString() )
-                {
-                    auto str = obj["value"].toString();
-                    value.writeString(str);
                 }
                 else
                 {
-                    //what type is obj["value"]
-                    jassertfalse;
+                    //                value.putBytes(obj.value);
+                    auto mb = *obj["value"].getBinaryData();
+                    juce::MemoryInputStream mis(bd, false);
+                    value.writeFromInputStream(mis, mis.getNumBytesRemaining());
                 }
+            }
+            else if(! obj["value"].isVoid() )
+            {
+                jassertfalse;
             }
         }
     }
@@ -940,15 +952,14 @@ juce::var toDer(const juce::var& obj)
 //    bytes.putByte(b1);
     bytes.writeByte(b1);
     
-    // use "short form" encoding
     value.flush(); //this trims the size of valueBlock to the length of data actually written to valueBlock.  see documentation tooltip
-//    if(value.length() <= 127)
-    if( valueBlock.getSize() <= 127 )
+    
+    // use "short form" encoding
+    if( valueBlock.getSize() <= 127 ) //if(value.length() <= 127)
     {
         // one byte describes the length
         // bit 8 = 0 and bits 7-1 = length
-//        bytes.putByte(value.length() & 0x7F);
-        bytes.writeByte(valueBlock.getSize() & 0x7F);
+        bytes.writeByte(valueBlock.getSize() & 0x7F); //bytes.putByte(value.length() & 0x7F);
     }
     else
     {
@@ -956,38 +967,54 @@ juce::var toDer(const juce::var& obj)
         // 2 to 127 bytes describe the length
         // first byte: bit 8 = 1 and bits 7-1 = # of additional bytes
         // other bytes: length in base 256, big-endian
-//        var len = value.length();
-        auto len = valueBlock.getSize();
+#if false
+        var len = value.length();
+        var lenBytes = '';
+        do {
+          lenBytes += String.fromCharCode(len & 0xFF);
+          len = len >>> 8;
+        } while(len > 0);
+
+        // set first byte to # bytes used to store the length and turn on
+        // bit 8 to indicate long-form length is used
+        bytes.putByte(lenBytes.length | 0x80);
+
+        // concatenate length bytes in reverse since they were generated
+        // little endian and we need big endian
+        for(var i = lenBytes.length - 1; i >= 0; --i) {
+          bytes.putByte(lenBytes.charCodeAt(i));
+        }
+#endif
+        auto len = valueBlock.getSize(); //var len = value.length();
         /*
          NOTE: Juce doesn't support memoryBlocks with a size that requires more than 8 bytes to represent.
-         The JS code below is strange
+         The JS code above is strange
          It appears to create a string from the length bytes in big-endian
          */
-//        var lenBytes = '';
-        juce::String lenBytes;
+        juce::MemoryBlock lenBytesBlock;
+        juce::MemoryOutputStream lenBytes(lenBytesBlock, false);
+//        juce::String lenBytes;
         do
         {
-//            lenBytes += String.fromCharCode(len & 0xFF);
+            lenBytes.writeByte(len & 0xFF); //lenBytes += String.fromCharCode(len & 0xFF);
             /*
              The static String.fromCharCode() method returns a string created from the specified sequence of UTF-16 code units.
              */
-//            lenBytes += juce::String(len & 0xFF);
-            char utf8uffer = len & 0xFF;
-            lenBytes += *(juce::String::fromUTF8(&utf8uffer).toUTF16());
-//            len = len >>> 8;
-            len = len >> 8;
+//            char utf8uffer = len & 0xFF;
+//            lenBytes += *(juce::String::fromUTF8(&utf8uffer).toUTF16());
+            len = len >> 8; //len = len >>> 8;
         }
         while(len > 0);
-        
+        lenBytes.flush();
+
         // set first byte to # bytes used to store the length and turn on
         // bit 8 to indicate long-form length is used
-//        bytes.putByte(lenBytes.length | 0x80);
-        bytes.writeByte(lenBytes.length() | 0x80);
-        
+
+        bytes.writeByte(lenBytesBlock.getSize() | 0x80); //bytes.putByte(lenBytes.length | 0x80);
+
         // concatenate length bytes in reverse since they were generated
         // little endian and we need big endian
-//        for(var i = lenBytes.length - 1; i >= 0; --i)
-        for( int i = lenBytes.length() - 1; i >= 0; --i)
+//        for( int i = lenBytes.length() - 1; i >= 0; --i) //for(var i = lenBytes.length - 1; i >= 0; --i)
         {
             /*
              String.prototype.charCodeAt()
@@ -995,9 +1022,13 @@ juce::var toDer(const juce::var& obj)
              putByte writes 1 byte, but UTF16 requires 2 bytes.
              this is strange.
              */
-            juce::uint16 charCode = *(lenBytes.substring(i, 1).toUTF16());
+//            juce::uint16 charCode = *(lenBytes.substring(i, 1).toUTF16());
 //            bytes.putByte(lenBytes.charCodeAt(i));
-            bytes.writeByte(charCode);
+//            bytes.writeByte(charCode);
+        }
+        for( int i = lenBytesBlock.getSize() - 1; i >= 0; --i )
+        {
+            bytes.writeByte( lenBytesBlock[i]);
         }
     }
     
@@ -1007,6 +1038,7 @@ juce::var toDer(const juce::var& obj)
     juce::MemoryInputStream mis(valueBlock, false);
     bytes.writeFromInputStream(mis, mis.getNumBytesRemaining());
     bytes.flush();
+    DBG("toDer() result: " << juce::String::toHexString(bytesBlock.getData(), bytesBlock.getSize(), 0) );
     return bytesBlock;
 }
 
