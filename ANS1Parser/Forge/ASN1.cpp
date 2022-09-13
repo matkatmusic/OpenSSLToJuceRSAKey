@@ -1097,7 +1097,15 @@ bool validate(const juce::var& obj,
     
     auto DBGHelper = [](const auto& obj, const auto& v, const auto& p)
     {
-        DBG(p << " " << obj[p].toString() << " " << v[p].toString() << " equalsWithSameType: " << static_cast<int>(obj[p].equalsWithSameType(v[p])));
+        if( obj[p].isBool() && v[p].isBool() )
+        {
+            DBG(p << " " << (static_cast<bool>(obj[p]) == true ? "true" : "false" ) << " " << (static_cast<bool>(v[p]) == true ? "true" : "false") << " equalsWithSameType: " << static_cast<int>(obj[p].equalsWithSameType(v[p])));
+        }
+        else
+        {
+            DBG(p << " " << obj[p].toString() << " " << v[p].toString() << " equalsWithSameType: " << static_cast<int>(obj[p].equalsWithSameType(v[p])));
+        }
+        
     };
     DBGHelper(obj, v, "tagClass");
     DBGHelper(obj, v, "type");
