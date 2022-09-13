@@ -1445,6 +1445,40 @@ juce::var wrapRsaPrivateKey(const KeyType& rsaKey)
     }
     
     return
+    create(ASN1::Class::UNIVERSAL,                  //return asn1.create(asn1.Class.UNIVERSAL,
+        ASN1::Type::SEQUENCE,                       //    asn1.Type.SEQUENCE,
+        true,                                       //    true,
+        juce::Array<juce::var>{                     //    [
+            // version (0)                          //     // version (0)
+            create(ASN1::Class::UNIVERSAL,          //     asn1.create(asn1.Class.UNIVERSAL,
+                ASN1::Type::INTEGER,                //        asn1.Type.INTEGER,
+                false,                              //        false,
+                Forge::ASN1::V2::integerToDer(0)),  //        asn1.integerToDer(0).getBytes()),
+            // privateKeyAlgorithm                  //    // privateKeyAlgorithm
+            create(ASN1::Class::UNIVERSAL,          //    asn1.create(asn1.Class.UNIVERSAL,
+                ASN1::Type::SEQUENCE,               //        asn1.Type.SEQUENCE,
+                true,                               //        true,
+                juce::Array<juce::var>{             //        [
+                    create(ASN1::Class::UNIVERSAL,  //         asn1.create(asn1.Class.UNIVERSAL,
+                        ASN1::Type::OID,            //            asn1.Type.OID,
+                        false,                      //            false,
+                        ASN1::V1::oidToDer(oid)),   //            asn1.oidToDer(pki.oids.rsaEncryption).getBytes()),
+                    create(ASN1::Class::UNIVERSAL,  //         asn1.create(asn1.Class.UNIVERSAL,
+                        ASN1::Type::NULL_,          //            asn1.Type.NULL,
+                        false,                      //            false,
+                        juce::var{})                //            '')
+                }                                   //    ]
+                ),                                  //    ),
+                 // PrivateKey                      //    // PrivateKey
+            create(ASN1::Class::UNIVERSAL,          //    asn1.create(asn1.Class.UNIVERSAL,
+                ASN1::Type::OCTETSTRING,            //                asn1.Type.OCTETSTRING,
+                false,                              //                false,
+                Forge::ASN1::V2::toDer(rsaKey))     //                asn1.toDer(rsaKey).getBytes())
+        }                                           //]
+        );                                          //);
+    
+    /*
+    return
     create(ASN1::Class::UNIVERSAL,
            ASN1::Type::SEQUENCE,
            true,
@@ -1480,6 +1514,7 @@ juce::var wrapRsaPrivateKey(const KeyType& rsaKey)
                       Forge::ASN1::V2::toDer(rsaKey))
 //           ]);
     });
+     */
 }
 /**
  * Converts a private key from an ASN.1 object.

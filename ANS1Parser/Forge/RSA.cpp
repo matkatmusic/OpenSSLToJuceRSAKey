@@ -82,27 +82,56 @@ namespace RSA
 {
 namespace V2
 {
-//var rsaPublicKeyValidator = {
-  // RSAPublicKey
+template<typename PropsType>
+juce::NamedValueSet makeProps(const PropsType& props)
+{
+    juce::NamedValueSet nvs;
+    
+    for( const auto& prop : props )
+    {
+        nvs.set(prop.name, prop.value);
+    }
+    
+    return nvs;
+}
+
+juce::var createObject(std::vector<juce::NamedValueSet::NamedValue> props)
+{
+    auto obj = juce::var( new juce::DynamicObject() );
+    auto* o = obj.getDynamicObject();
+    
+    auto& nvs = o->getProperties();
+    nvs = makeProps(props);
+    
+    return obj;
+}
+//var rsaPublicKeyValidator =
+//{
+//  // RSAPublicKey
 //  name: 'RSAPublicKey',
 //  tagClass: asn1.Class.UNIVERSAL,
 //  type: asn1.Type.SEQUENCE,
 //  constructed: true,
-//  value: [{
+//  value:
+//  [
+//  {
 //    // modulus (n)
 //    name: 'RSAPublicKey.modulus',
 //    tagClass: asn1.Class.UNIVERSAL,
 //    type: asn1.Type.INTEGER,
 //    constructed: false,
 //    capture: 'publicKeyModulus'
-//  }, {
+//  },
+//  {
 //    // publicExponent (e)
 //    name: 'RSAPublicKey.exponent',
 //    tagClass: asn1.Class.UNIVERSAL,
 //    type: asn1.Type.INTEGER,
 //    constructed: false,
 //    capture: 'publicKeyExponent'
-//  }]
+//  }
+//  ]
+//};
 juce::var getRSAPublicKeyValidator()
 {
     juce::var v( new juce::DynamicObject() );
@@ -233,32 +262,8 @@ juce::var getPublicKeyValidator()
     return v;
 }
 
-template<typename PropsType>
-juce::NamedValueSet makeProps(const PropsType& props)
-{
-    juce::NamedValueSet nvs;
-    
-    for( const auto& prop : props )
-    {
-        nvs.set(prop.name, prop.value);
-    }
-    
-    return nvs;
-}
-
-juce::var createObject(std::vector<juce::NamedValueSet::NamedValue> props)
-{
-    auto obj = juce::var( new juce::DynamicObject() );
-    auto* o = obj.getDynamicObject();
-    
-    auto& nvs = o->getProperties();
-    nvs = makeProps(props);
-    
-    return obj;
-}
-
 juce::var getPrivateKeyValidator()
-{   
+{
     auto privateKeyValidator = createObject({ //begin object                    //var privateKeyValidator = {
         // PrivateKeyInfo                                                           // PrivateKeyInfo
         {"name", "PrivateKeyInfo"},                                             //  name: 'PrivateKeyInfo',
@@ -307,110 +312,90 @@ juce::var getPrivateKeyValidator()
 
 juce::var getRsaPrivateKeyValidator()
 {
-    auto v = juce::var( new juce::DynamicObject() );
-    auto* dynObjPtr = v.getDynamicObject();
-    auto* vo = dynObjPtr;
-
-    dynObjPtr->setProperty("name", "RSAPrivateKey");//name: 'RSAPrivateKey',
-    dynObjPtr->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-    dynObjPtr->setProperty("type", static_cast<int>(ASN1::Type::SEQUENCE));//type: asn1.Type.SEQUENCE,
-    dynObjPtr->setProperty("constructed", true);//constructed: true,
+    auto rsaPrivateKeyValidator = createObject({//begin object                  //var rsaPrivateKeyValidator = {
+        // RSAPrivateKey                                                        //    // RSAPrivateKey
+        {"name", "RSAPrivateKey"},                                              //    name: 'RSAPrivateKey',
+        {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},                 //    tagClass: asn1.Class.UNIVERSAL,
+        {"type", static_cast<int>(ASN1::Type::SEQUENCE)},                       //    type: asn1.Type.SEQUENCE,
+        {"constructed", true},                                                  //    constructed: true,
+        {"value",                                                               //    value:
+        juce::Array<juce::var>{//begin array                                    //    [
+            createObject({//begin object                                        //        {
+                // Version (INTEGER)                                            //            // Version (INTEGER)
+                {"name", "RSAPrivateKey.version"},                              //            name: 'RSAPrivateKey.version',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},                //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                         //            constructed: false,
+                {"capture", "privateKeyVersion"}                                //            capture: 'privateKeyVersion'
+            }),//end object                                                     //        },
+            createObject({//begin object                                        //        {
+                // modulus (n)                                                  //            // modulus (n)
+                {"name", "RSAPrivateKey.modulus"},                              //            name: 'RSAPrivateKey.modulus',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},                //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                         //            constructed: false,
+                {"capture", "privateKeyModulus"}                                //            capture: 'privateKeyModulus'
+            }),//end object                                                     //        },
+            createObject({//begin object                                        //        {
+         // publicExponent (e)                                                  //            // publicExponent (e)
+                {"name", "RSAPrivateKey.publicExponent"},                       //            name: 'RSAPrivateKey.publicExponent',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},                //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                         //            constructed: false,
+                {"capture", "privateKeyPublicExponent"}                         //            capture: 'privateKeyPublicExponent'
+            }),//end object                                                     //        },
+            createObject({//begin object                                        //        {
+                // privateExponent (d)                                          //            // privateExponent (d)
+                {"name", "RSAPrivateKey.privateExponent"},                      //            name: 'RSAPrivateKey.privateExponent',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},                //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                         //            constructed: false,
+                {"capture", "privateKeyPrivateExponent"}                        //            capture: 'privateKeyPrivateExponent'
+            }),//end object                                                     //        },
+            createObject({//begin object                                        //        {
+                // prime1 (p)                                                   //            // prime1 (p)
+                {"name", "RSAPrivateKey.prime1"},                               //            name: 'RSAPrivateKey.prime1',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},                //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                         //            constructed: false,
+                {"capture", "privateKeyPrime1"}                                 //            capture: 'privateKeyPrime1'
+            }),//end object                                                     //        },
+            createObject({//begin object                                        //        {
+                // prime2 (q)                                                   //            // prime2 (q)
+                {"name", "RSAPrivateKey.prime2"},                               //            name: 'RSAPrivateKey.prime2',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},                //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                         //            constructed: false,
+                {"capture", "privateKeyPrime2"}                                 //            capture: 'privateKeyPrime2'
+            }),//end object                                                     //        },
+            createObject({//begin object                                        //        {
+                // exponent1 (d mod (p-1))                                      //            // exponent1 (d mod (p-1))
+                {"name", "RSAPrivateKey.exponent1"},                            //            name: 'RSAPrivateKey.exponent1',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},                //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                         //            constructed: false,
+                {"capture", "privateKeyExponent1"}                              //            capture: 'privateKeyExponent1'
+            }),//end object                                                     //        },
+            createObject({//begin object                                        //        {
+                // exponent2 (d mod (q-1))                                      //            // exponent2 (d mod (q-1))
+                {"name", "RSAPrivateKey.exponent2"},                            //            name: 'RSAPrivateKey.exponent2',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},                //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                         //            constructed: false,
+                {"capture", "privateKeyExponent2"}                              //            capture: 'privateKeyExponent2'
+            }),//end object                                                     //        },
+            createObject({//begin object                                        //        {
+                // coefficient ((inverse of q) mod p)                           //            // coefficient ((inverse of q) mod p)
+                {"name", "RSAPrivateKey.coefficient"},                          //            name: 'RSAPrivateKey.coefficient',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},                //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                         //            constructed: false,
+                {"capture", "privateKeyCoefficient"}                            //            capture: 'privateKeyCoefficient'
+            })//end object                                                      //        }
+        }}//end array                                                           //    ]
+    });//end object                                                             //};
     
-//    value: [
-//        {
-      // Version (INTEGER)
-    auto version = juce::var( new juce::DynamicObject() );
-    dynObjPtr = version.getDynamicObject();
-        dynObjPtr->setProperty("name", "RSAPrivateKey.version");//name: 'RSAPrivateKey.version',
-        dynObjPtr->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-        dynObjPtr->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));//type: asn1.Type.INTEGER,
-        dynObjPtr->setProperty("constructed", false);//constructed: false,
-        dynObjPtr->setProperty("capture", "privateKeyVersion");//capture: 'privateKeyVersion'
-//    },
-//      {
-      // modulus (n)
-    auto modulus = juce::var( new juce::DynamicObject() );
-    dynObjPtr = modulus.getDynamicObject();
-        dynObjPtr->setProperty("name", "RSAPrivateKey.modulus");//name: 'RSAPrivateKey.modulus',
-        dynObjPtr->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-        dynObjPtr->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));//type: asn1.Type.INTEGER,
-        dynObjPtr->setProperty("constructed", false);//constructed: false,
-        dynObjPtr->setProperty("capture", "privateKeyModulus");//capture: 'privateKeyModulus'
-//    },
-//      {
-      // publicExponent (e)
-    auto publicExponent = juce::var( new juce::DynamicObject() );
-    dynObjPtr = publicExponent.getDynamicObject();
-        dynObjPtr->setProperty("name", "RSAPrivateKey.publicExponent");//name: 'RSAPrivateKey.publicExponent',
-        dynObjPtr->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-        dynObjPtr->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));//type: asn1.Type.INTEGER,
-        dynObjPtr->setProperty("constructed", false);//constructed: false,
-        dynObjPtr->setProperty("capture", "privateKeyPublicExponent");//capture: 'privateKeyPublicExponent'
-//    },
-//      {
-      // privateExponent (d)
-    auto privateExponent = juce::var( new juce::DynamicObject() );
-    dynObjPtr = privateExponent.getDynamicObject();
-        dynObjPtr->setProperty("name", "RSAPrivateKey.privateExponent");//name: 'RSAPrivateKey.privateExponent',
-        dynObjPtr->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-        dynObjPtr->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));//type: asn1.Type.INTEGER,
-        dynObjPtr->setProperty("constructed", false);//constructed: false,
-        dynObjPtr->setProperty("capture", "privateKeyPrivateExponent");//capture: 'privateKeyPrivateExponent'
-//    },
-//      {
-      // prime1 (p)
-    auto prime1 = juce::var( new juce::DynamicObject() );
-    dynObjPtr = prime1.getDynamicObject();
-        dynObjPtr->setProperty("name", "RSAPrivateKey.prime1");//name: 'RSAPrivateKey.prime1',
-        dynObjPtr->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-        dynObjPtr->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));//type: asn1.Type.INTEGER,
-        dynObjPtr->setProperty("constructed", false);//constructed: false,
-        dynObjPtr->setProperty("capture", "privateKeyPrime1");//capture: 'privateKeyPrime1'
-//    },
-//      {
-      // prime2 (q)
-    auto prime2 = juce::var( new juce::DynamicObject() );
-    dynObjPtr = prime2.getDynamicObject();
-          dynObjPtr->setProperty("name", "RSAPrivateKey.prime2");//name: 'RSAPrivateKey.prime2',
-          dynObjPtr->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-          dynObjPtr->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));//type: asn1.Type.INTEGER,
-          dynObjPtr->setProperty("constructed", false);//constructed: false,
-          dynObjPtr->setProperty("capture", "privateKeyPrime2");//capture: 'privateKeyPrime2'
-//    },
-//      {
-      // exponent1 (d mod (p-1))
-    auto exponent1 = juce::var( new juce::DynamicObject() );
-    dynObjPtr = exponent1.getDynamicObject();
-          dynObjPtr->setProperty("name", "RSAPrivateKey.exponent1");//name: 'RSAPrivateKey.exponent1',
-          dynObjPtr->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-          dynObjPtr->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));//type: asn1.Type.INTEGER,
-          dynObjPtr->setProperty("constructed", false);//constructed: false,
-          dynObjPtr->setProperty("capture", "privateKeyExponent1");//capture: 'privateKeyExponent1'
-//    },
-//      {
-      // exponent2 (d mod (q-1))
-    auto exponent2 = juce::var( new juce::DynamicObject() );
-    dynObjPtr = exponent2.getDynamicObject();
-          dynObjPtr->setProperty("name", "RSAPrivateKey.exponent2");//name: 'RSAPrivateKey.exponent2',
-          dynObjPtr->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-          dynObjPtr->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));//type: asn1.Type.INTEGER,
-          dynObjPtr->setProperty("constructed", false);//constructed: false,
-          dynObjPtr->setProperty("capture", "privateKeyExponent2");//capture: 'privateKeyExponent2'
-//    },
-//      {
-      // coefficient ((inverse of q) mod p)
-    auto coefficient = juce::var( new juce::DynamicObject() );
-    dynObjPtr = coefficient.getDynamicObject();
-          dynObjPtr->setProperty("name", "RSAPrivateKey.coefficient");//name: 'RSAPrivateKey.coefficient',
-          dynObjPtr->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-          dynObjPtr->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));//type: asn1.Type.INTEGER,
-          dynObjPtr->setProperty("constructed", false);//constructed: false,
-          dynObjPtr->setProperty("capture", "privateKeyCoefficient");//capture: 'privateKeyCoefficient'
-//    }
-//    ]
-    vo->setProperty("value", juce::Array<juce::var>{version, modulus, publicExponent, privateExponent, prime1, prime2, exponent1, exponent2, coefficient});
-    
-    return v;
+    return rsaPrivateKeyValidator;
 }
 } //end namespace V2
 namespace V1
