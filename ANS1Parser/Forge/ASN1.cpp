@@ -1095,18 +1095,18 @@ bool validate(const juce::var& obj,
 {
     bool rval = false;
     
-//    auto DBGHelper = [](const auto& obj, const auto& v, const auto& p)
-//    {
-//        DBG(p << " " << obj[p].toString() << " " << v[p].toString() << " equalsWithSameType: " << static_cast<int>(obj[p].equalsWithSameType(v[p])));
-//    };
-//    DBGHelper(obj, v, "tagClass");
-//    DBGHelper(obj, v, "type");
+    auto DBGHelper = [](const auto& obj, const auto& v, const auto& p)
+    {
+        DBG(p << " " << obj[p].toString() << " " << v[p].toString() << " equalsWithSameType: " << static_cast<int>(obj[p].equalsWithSameType(v[p])));
+    };
+    DBGHelper(obj, v, "tagClass");
+    DBGHelper(obj, v, "type");
     // ensure tag class and type are the same if specified
     if( (obj["tagClass"].equalsWithSameType(v["tagClass"]) || v["tagClass"].isVoid() ) &&
        (obj["type"].equalsWithSameType(v["type"]) || v["type"].isVoid()) )
     {
         // ensure constructed flag is the same if specified
-//        DBGHelper(obj, v, "constructed");
+        DBGHelper(obj, v, "constructed");
         if( obj["constructed"].equalsWithSameType(v["constructed"]) || v["constructed"].isVoid() )
         {
             rval = true;

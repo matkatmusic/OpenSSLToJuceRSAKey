@@ -233,59 +233,76 @@ juce::var getPublicKeyValidator()
     return v;
 }
 
-juce::var getPrivateKeyValidator()
+template<typename PropsType>
+juce::NamedValueSet makeProps(const PropsType& props)
 {
-    auto v = juce::var( new juce::DynamicObject() );
-    auto* o = v.getDynamicObject();
-    // PrivateKeyInfo
-    o->setProperty("name", "PrivateKeyInfo");//name: 'PrivateKeyInfo',
-    o->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-    o->setProperty("type", static_cast<int>(ASN1::Type::SEQUENCE));//type: asn1.Type.SEQUENCE,
-    o->setProperty("constructed", true);//constructed: true,
-//    value: [
-    //{
-      // Version (INTEGER)
-    auto versionInteger = juce::var( new juce::DynamicObject() );
-    auto* vi = versionInteger.getDynamicObject();
-        vi->setProperty("name", "PrivateKeyInfo.version");//name: 'PrivateKeyInfo.version',
-        vi->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-        vi->setProperty("type", static_cast<int>(ASN1::Type::INTEGER));//type: asn1.Type.INTEGER,
-        vi->setProperty("constructed", false);//constructed: false,
-        vi->setProperty("capture", "privateKeyVersion");//capture: 'privateKeyVersion'
-//    },
-//      {
-    auto privateKeyAlgorithm = juce::var( new juce::DynamicObject() );
-    auto* pka = privateKeyAlgorithm.getDynamicObject();
-      // privateKeyAlgorithm
-        pka->setProperty("name", "PrivateKeyInfo.privateKeyAlgorithm");//name: 'PrivateKeyInfo.privateKeyAlgorithm',
-        pka->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-        pka->setProperty("type", static_cast<int>(ASN1::Type::SEQUENCE));//type: asn1.Type.SEQUENCE,
-        pka->setProperty("constructed", true);//constructed: true,
-//      value: [
-//          {
-    auto algoIdentifier = juce::var( new juce::DynamicObject() );
-    auto* agid = algoIdentifier.getDynamicObject();
-            agid->setProperty("name", "AlgorithmIdentifier.algorithm");//name: 'AlgorithmIdentifier.algorithm',
-            agid->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-            agid->setProperty("type", static_cast<int>(ASN1::Type::OID));//type: asn1.Type.OID,
-            agid->setProperty("constructed", false);//constructed: false,
-            agid->setProperty("capture", "privateKeyOid");//capture: 'privateKeyOid'
-//        }]
-        pka->setProperty("value", juce::Array<juce::var>{algoIdentifier});
-//      },
-//    {
-    auto privateKey = juce::var( new juce::DynamicObject() );
-    auto* pk = algoIdentifier.getDynamicObject();
-      // PrivateKey
-        pk->setProperty("name", "PrivateKeyInfo");//name: 'PrivateKeyInfo',
-        pk->setProperty("tagClass", static_cast<int>(ASN1::Class::UNIVERSAL));//tagClass: asn1.Class.UNIVERSAL,
-        pk->setProperty("type", static_cast<int>(ASN1::Type::OCTETSTRING));//type: asn1.Type.OCTETSTRING,
-        pk->setProperty("constructed", false);//constructed: false,
-        pk->setProperty("capture", "privateKey");//capture: 'privateKey'
-//    }]
-    o->setProperty("value", juce::Array<juce::var>{ versionInteger, privateKeyAlgorithm, privateKey });
+    juce::NamedValueSet nvs;
     
-    return v;
+    for( const auto& prop : props )
+    {
+        nvs.set(prop.name, prop.value);
+    }
+    
+    return nvs;
+}
+
+juce::var createObject(std::vector<juce::NamedValueSet::NamedValue> props)
+{
+    auto obj = juce::var( new juce::DynamicObject() );
+    auto* o = obj.getDynamicObject();
+    
+    auto& nvs = o->getProperties();
+    nvs = makeProps(props);
+    
+    return obj;
+}
+
+juce::var getPrivateKeyValidator()
+{   
+    auto privateKeyValidator = createObject({ //begin object                    //var privateKeyValidator = {
+        // PrivateKeyInfo                                                           // PrivateKeyInfo
+        {"name", "PrivateKeyInfo"},                                             //  name: 'PrivateKeyInfo',
+        {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},                 //  tagClass: asn1.Class.UNIVERSAL,
+        {"type", static_cast<int>(ASN1::Type::SEQUENCE)},                       //  type: asn1.Type.SEQUENCE,
+        {"constructed", true},                                                  //  constructed: true,
+        {"value", juce::Array<juce::var>{ //begin array                         //  value: [
+            createObject({//begin object                                        //  {
+                // Version (INTEGER)                                                    // Version (INTEGER)
+                {"name", "PrivateKeyInfo.version"},                             //      name: 'PrivateKeyInfo.version',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //      tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},                //      type: asn1.Type.INTEGER,
+                {"constructed", false},                                         //      constructed: false,
+                {"capture", "privateKeyVersion"}                                //      capture: 'privateKeyVersion'
+            }), //end object                                                    //  },
+            createObject({ //begin object                                       //  {
+                // privateKeyAlgorithm                                                  // privateKeyAlgorithm
+                {"name", "PrivateKeyInfo.privateKeyAlgorithm"},                 //      name: 'PrivateKeyInfo.privateKeyAlgorithm',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //      tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::SEQUENCE)},               //      type: asn1.Type.SEQUENCE,
+                {"constructed", true},                                          //      constructed: true,
+                {"value", juce::Array<juce::var>{//begin array                  //      value: [
+                    createObject({//begin object                                //      {
+                        {"name", "AlgorithmIdentifier.algorithm"},              //          name: 'AlgorithmIdentifier.algorithm',
+                        {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)}, //          tagClass: asn1.Class.UNIVERSAL,
+                        {"type", static_cast<int>(ASN1::Type::OID)},            //          type: asn1.Type.OID,
+                        {"constructed", false},                                 //          constructed: false,
+                        {"capture", "privateKeyOid"}                            //          capture: 'privateKeyOid'
+                    }) //end object                                             //      }
+                }}//end array                                                   //      ]
+            }), //end object                                                    //  },
+            createObject({ //begin object                                       //  {
+                // PrivateKey                                                           // PrivateKey
+                {"name", "PrivateKeyInfo"},                                     //      name: 'PrivateKeyInfo',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},         //      tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::OCTETSTRING)},            //      type: asn1.Type.OCTETSTRING,
+                {"constructed", false},                                         //      constructed: false,
+                {"capture", "privateKey"}                                       //      capture: 'privateKey'
+                }) //end object                                                 //  }
+        }}//end array                                                           //  ]
+    });//end object                                                             //};
+
+    
+    return privateKeyValidator;
 }
 
 juce::var getRsaPrivateKeyValidator()
