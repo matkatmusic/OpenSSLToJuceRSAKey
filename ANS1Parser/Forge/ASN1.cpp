@@ -700,19 +700,24 @@ juce::MemoryBlock oidToDer(juce::String oid)
 //asn1.oidToDer = function(oid) {
     // split OID into individual values
 //    var values = oid.split('.');
+    DBG( "OID: " << oid );
     auto values = juce::StringArray::fromTokens(oid, ".", "");
 //    var bytes = forge.util.createBuffer();
     auto block = juce::MemoryBlock();
     auto bytes = juce::MemoryOutputStream(block, false);
     // first byte is 40 * value1 + value2
 //    bytes.putByte(40 * parseInt(values[0], 10) + parseInt(values[1], 10));
-    bytes.writeByte(40 + values[0].getIntValue() + values[1].getIntValue());
+    auto v0 = values[0].getIntValue();
+    auto v1 = values[1].getIntValue();
+    auto v = 40 * v0 + v1;
+    bytes.writeByte(v);
+//    bytes.writeShortBigEndian(40 + values[0].getIntValue() + values[1].getIntValue());
     // other bytes are each value in base 128 with 8th bit set except for
     // the last byte for each value
 //    var last, valueBytes, value, b;
     bool last;
-    std::vector<char> valueBytes;
-    unsigned int value;
+    std::vector<juce::uint8> valueBytes;
+    juce::int64 value;
     int b;
     
 //    for(var i = 2; i < values.length; ++i)
@@ -741,15 +746,23 @@ juce::MemoryBlock oidToDer(juce::String oid)
             last = false;
         } while(value > 0);
         
+        for( size_t j = 0; j < valueBytes.size(); ++j ) //for( var j = 0; j < valueBytes.length; ++j )
+        {
+            DBG( "valueBytes[" << i-2 << "][" << j << "]: " << valueBytes[j]);
+        }
         // add value bytes in reverse (needs to be in big endian)
 //        for(var n = valueBytes.length - 1; n >= 0; --n)
-        for( size_t n = valueBytes.size() - 1; n != 0; --n)
+        for (auto n = valueBytes.rbegin(); n != valueBytes.rend(); ++n)
         {
 //            bytes.putByte(valueBytes[n]);
-            bytes.writeByte(valueBytes[n]);
+            auto byte = *n;
+            DBG( "writing byte: " << byte );
+            bytes.writeByte(byte);
         }
     }
 
+    bytes.flush();
+    DBG( "OID bytes: " << juce::String::toHexString(block.getData(), block.getSize(), 0));
     return block;
 };
 } //end namespace V1

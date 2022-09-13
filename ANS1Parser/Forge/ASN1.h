@@ -1118,7 +1118,7 @@ juce::var create(Class tagClass,
                  Type type,
                  bool constructed,
                  juce::var value,
-                 juce::NamedValueSet options);
+                 juce::NamedValueSet options = {});
 juce::var copy(const juce::var& obj, juce::NamedValueSet options);
 } //end namespace V2
 
