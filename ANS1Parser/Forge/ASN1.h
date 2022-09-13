@@ -1871,7 +1871,18 @@ asn1.integerToDer = function(x) {
   error.integer = x;
   throw error;
 };
-
+#endif
+namespace Forge
+{
+namespace ASN1
+{
+namespace V2
+{
+juce::MemoryBlock integerToDer(int x);
+} //end namespace V2
+} //end namespace ASN1
+} //end namespace Forge
+#if false
 /**
  * Converts a DER-encoded byte buffer to a javascript integer. This is
  * typically used to decode the value of an INTEGER type.

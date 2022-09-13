@@ -393,6 +393,54 @@ namespace ASN1
 {
 namespace V2
 {
+
+juce::MemoryBlock integerToDer(int x)
+{
+    auto rval = juce::MemoryBlock();
+    auto mos = juce::MemoryOutputStream(rval, false);
+    auto putSignedInt = [](int i, unsigned int n)
+    {
+        /**
+         * Puts a signed n-bit integer in this buffer in big-endian order. Two's
+         * complement representation is used.
+         *
+         * @param i the n-bit integer.
+         * @param n the number of bits in the integer (8, 16, 24, or 32).
+         *
+         * @return this buffer.
+         */
+          // putInt checks n
+        
+        jassert( n % 8 == 0 );
+        jassert( n > 0 && n < 33 );
+        if(i < 0)
+        {
+            i += 2 << (n - 1);
+        }
+        return i;
+    };
+    
+    if(x >= -0x80 && x < 0x80) {
+        mos.writeIntBigEndian(putSignedInt(x, 8)); // return rval.putSignedInt(x, 8);
+    }
+    else if(x >= -0x8000 && x < 0x8000) {
+        mos.writeIntBigEndian(putSignedInt(x, 16));//return rval.putSignedInt(x, 16);
+    }
+    else if(x >= -0x800000 && x < 0x800000) {
+        mos.writeIntBigEndian(putSignedInt(x, 24));//return rval.putSignedInt(x, 24);
+    }
+    else if(x >= -0x80000000 && x < 0x80000000) {
+        mos.writeIntBigEndian(putSignedInt(x, 32));//return rval.putSignedInt(x, 32);
+    }
+    else
+    {
+        jassertfalse;
+    }
+    mos.flush();
+    
+    return rval;
+}
+
 juce::var create(Class tagClass,
                  Type type,
                  bool constructed,
@@ -1108,6 +1156,7 @@ bool validate(const juce::var& obj,
             {
                 if(v.hasProperty("capture"))
                 {
+                    DBG( "capturing: " << v["capture"].toString());
                     capture.getDynamicObject()->setProperty(v["capture"].toString(), obj["value"]);
                 }
                 if( v.hasProperty("captureAsn1"))

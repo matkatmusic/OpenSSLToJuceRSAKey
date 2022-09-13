@@ -17,6 +17,21 @@
  */
 #include "ASN1.h"
 #include "Oids.h"
+
+namespace Forge
+{
+namespace PKI
+{
+namespace V1
+{
+juce::String findOID(juce::String oidToFind);
+} //end namespace V1
+namespace V2
+{
+juce::MemoryBlock _bnToBytes(const juce::BigInteger& b);
+} //end namespace V2
+} //end namespace PKI
+} //end namespace Forge
 #if false
 /**
  * Javascript implementation of basic RSA algorithms.
@@ -288,6 +303,8 @@ namespace V2
 {
 juce::var getPublicKeyValidator();
 juce::var getRSAPublicKeyValidator();
+juce::var getPrivateKeyValidator();
+juce::var getRsaPrivateKeyValidator();
 } //end namespace V2
 } //end namespace RSA
 } //end namespace Forge
@@ -1376,23 +1393,94 @@ pki.setRsaPrivateKey = pki.rsa.setPrivateKey = function(
  */
 pki.wrapRsaPrivateKey = function(rsaKey) {
   // PrivateKeyInfo
-  return asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+  return
+    asn1.create(asn1.Class.UNIVERSAL,
+                     asn1.Type.SEQUENCE,
+                     true,
+                     [
     // version (0)
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-      asn1.integerToDer(0).getBytes()),
+    asn1.create(asn1.Class.UNIVERSAL,
+                asn1.Type.INTEGER,
+                false,
+                asn1.integerToDer(0).getBytes()),
     // privateKeyAlgorithm
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
-      asn1.create(
-        asn1.Class.UNIVERSAL, asn1.Type.OID, false,
-        asn1.oidToDer(pki.oids.rsaEncryption).getBytes()),
-      asn1.create(asn1.Class.UNIVERSAL, asn1.Type.NULL, false, '')
+    asn1.create(asn1.Class.UNIVERSAL,
+                asn1.Type.SEQUENCE,
+                true,
+                [
+      asn1.create(asn1.Class.UNIVERSAL,
+                  asn1.Type.OID,
+                  false,
+                  asn1.oidToDer(pki.oids.rsaEncryption).getBytes()),
+      asn1.create(asn1.Class.UNIVERSAL,
+                  asn1.Type.NULL,
+                  false,
+                  '')
     ]),
     // PrivateKey
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OCTETSTRING, false,
-      asn1.toDer(rsaKey).getBytes())
+    asn1.create(asn1.Class.UNIVERSAL,
+                asn1.Type.OCTETSTRING,
+                false,
+                asn1.toDer(rsaKey).getBytes())
   ]);
 };
 
+#endif
+namespace Forge
+{
+namespace PKI
+{
+namespace V2
+{
+template<typename KeyType>
+juce::var wrapRsaPrivateKey(const KeyType& rsaKey)
+{
+    using namespace Forge::ASN1::V2;
+    // PrivateKeyInfo
+    auto oid = Forge::PKI::V1::findOID("rsaEncryption");
+    if( oid.isEmpty() )
+    {
+        jassertfalse;
+        return {};
+    }
+    
+    return
+    create(ASN1::Class::UNIVERSAL,
+           ASN1::Type::SEQUENCE,
+           true,
+           juce::Array<juce::var>{
+        //[
+               // version (0)
+               create(ASN1::Class::UNIVERSAL,
+                      ASN1::Type::INTEGER,
+                      false,
+                      //asn1.integerToDer(0).getBytes()),
+                      Forge::ASN1::V2::integerToDer(0)),
+               // privateKeyAlgorithm
+               create(ASN1::Class::UNIVERSAL,
+                      ASN1::Type::SEQUENCE,
+                      true,
+                      juce::Array<juce::var>{//[
+                          create(ASN1::Class::UNIVERSAL,
+                                 ASN1::Type::OID,
+                                 false,
+                                 //asn1.oidToDer(pki.oids.rsaEncryption).getBytes()),
+                                 ASN1::V1::oidToDer(oid)),
+                          create(ASN1::Class::UNIVERSAL,
+                                 ASN1::Type::NULL_,
+                                 false,
+                                 juce::var{})
+                      //]),
+               }),
+               // PrivateKey
+               create(ASN1::Class::UNIVERSAL,
+                      ASN1::Type::OCTETSTRING,
+                      false,
+//                      asn1.toDer(rsaKey).getBytes())
+                      Forge::ASN1::V2::toDer(rsaKey))
+//           ]);
+    });
+}
 /**
  * Converts a private key from an ASN.1 object.
  *
@@ -1401,6 +1489,7 @@ pki.wrapRsaPrivateKey = function(rsaKey) {
  *
  * @return the private key.
  */
+/*
 pki.privateKeyFromAsn1 = function(obj) {
   // get PrivateKeyInfo
   var capture = {};
@@ -1443,7 +1532,131 @@ pki.privateKeyFromAsn1 = function(obj) {
     new BigInteger(dQ, 16),
     new BigInteger(qInv, 16));
 };
+*/
+//namespace Forge
+//{
+//namespace PKI
+//{
+//namespace V2
+//{
+template<typename KeyType>
+KeyType privateKeyFromAsn1(juce::var obj)
+{
+    // get PrivateKeyInfo
+    juce::var capture(new juce::DynamicObject()); //var capture = {}
+    juce::StringArray errors; //var errors = [];
+    if(Forge::ASN1::V2::validate(obj, Forge::RSA::V2::getPrivateKeyValidator(), capture, errors)) //if(asn1.validate(obj, privateKeyValidator, capture, errors))
+    {
+        //obj = asn1.fromDer(forge.util.createBuffer(capture.privateKey));
+        jassert(capture.hasProperty("privateKey"));
+        jassert(capture["privateKey"].isBinaryData());
+        auto block = *capture["privateKey"].getBinaryData();
+        obj = Forge::ASN1::V2::fromDer(block, {});
+    }
+    else
+    {
+        DBG( "failed to validate obj against Private Key Validator" );
+        DBG( "errors: ");
+        for( auto e : errors )
+            DBG( e );
+        
+        jassertfalse;
+        return {};
+    }
+    
+    // get RSA params
+    capture = juce::var(new juce::DynamicObject()); //capture = {};
+    errors.clear(); //errors = [];
+    if(!Forge::ASN1::V2::validate(obj, Forge::RSA::V2::getRsaPrivateKeyValidator(), capture, errors)) //if(!asn1.validate(obj, rsaPrivateKeyValidator, capture, errors))
+    {
+//        var error = new Error('Cannot read public key. ' +
+//                              'ASN.1 object does not contain an RSAPublicKey.');
+//        error.errors = errors;
+//        throw error;
+        DBG( "Cannot read public key");
+        DBG( "ASN.1 object does not contain an RSAPrivateKey");
+        DBG( "errors during validation:" );
+        for( auto e : errors )
+        {
+            DBG( e );
+        }
+        jassertfalse;
+        return {};
+    }
+    
+    // FIXME: inefficient, get a BigInteger that uses byte strings
+    auto getHexFromProp = [&capture](juce::Identifier property)
+    {
+        jassert(capture.hasProperty(property));
+        jassert(capture[property].isBinaryData());
+        const auto& modMB = *capture[property].getBinaryData();
+        return juce::String::toHexString(modMB.getData(),
+                                         modMB.getSize(),
+                                         0);
+    };
+    auto n = getHexFromProp("privateKeyModulus");
+    auto e = getHexFromProp("privateKeyPublicExponent");
+    auto d = getHexFromProp("privateKeyPrivateExponent");
+    auto p = getHexFromProp("privateKeyPrime1");
+    auto q = getHexFromProp("privateKeyPrime2");
+    auto dP = getHexFromProp("privateKeyExponent1");
+    auto dQ = getHexFromProp("privateKeyExponent2");
+    auto qInv = getHexFromProp("privateKeyCoefficient");
+    
+    
+    DBG( "n: " << n );
+    DBG( "e: " << e );
+    DBG( "d: " << d );
+    DBG( "p: " << p );
+    DBG( "q: " << q );
+    DBG( "dP: " << dP );
+    DBG( "dQ: " << dQ );
+    DBG( "qInv: " << qInv );
+    
+    auto getBigInt = [](juce::String hex)
+    {
+        auto bi = juce::BigInteger();
+        bi.parseString(hex, 16);
+        return bi;
+    };
+    
+    auto n_bi = getBigInt( n );
+    auto e_bi = getBigInt( e );
+    auto d_bi = getBigInt( d );
+    auto p_bi = getBigInt( p );
+    auto q_bi = getBigInt( q );
+    auto dP_bi = getBigInt( dP );
+    auto dQ_bi = getBigInt( dQ );
+    auto qInv_bi = getBigInt( qInv);
+    // set private key
+    /*
+    return pki.setRsaPrivateKey(
+      new BigInteger(n, 16),
+      new BigInteger(e, 16),
+      new BigInteger(d, 16),
+      new BigInteger(p, 16),
+      new BigInteger(q, 16),
+      new BigInteger(dP, 16),
+      new BigInteger(dQ, 16),
+      new BigInteger(qInv, 16));
+     */
+    return KeyType
+    {
+        n_bi,
+        e_bi,
+        d_bi,
+        p_bi,
+        q_bi,
+        dP_bi,
+        dQ_bi,
+        qInv_bi
+    };
+}
 
+} //end namespace V2
+} //end namespace PKI
+} //end namespace Forge
+#if false
 /**
  * Converts a private key to an ASN.1 RSAPrivateKey.
  *
@@ -1453,37 +1666,125 @@ pki.privateKeyFromAsn1 = function(obj) {
  */
 pki.privateKeyToAsn1 = pki.privateKeyToRSAPrivateKey = function(key) {
   // RSAPrivateKey
-  return asn1.create(asn1.Class.UNIVERSAL, asn1.Type.SEQUENCE, true, [
+  return asn1.create(asn1.Class.UNIVERSAL,
+                     asn1.Type.SEQUENCE,
+                     true,
+                     [
     // version (0 = only 2 primes, 1 multiple primes)
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-      asn1.integerToDer(0).getBytes()),
-    // modulus (n)
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-      _bnToBytes(key.n)),
-    // publicExponent (e)
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-      _bnToBytes(key.e)),
-    // privateExponent (d)
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-      _bnToBytes(key.d)),
-    // privateKeyPrime1 (p)
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-      _bnToBytes(key.p)),
-    // privateKeyPrime2 (q)
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-      _bnToBytes(key.q)),
-    // privateKeyExponent1 (dP)
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-      _bnToBytes(key.dP)),
-    // privateKeyExponent2 (dQ)
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-      _bnToBytes(key.dQ)),
-    // coefficient (qInv)
-    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.INTEGER, false,
-      _bnToBytes(key.qInv))
+                         asn1.create(asn1.Class.UNIVERSAL,
+                                     asn1.Type.INTEGER,
+                                     false,
+                                     asn1.integerToDer(0).getBytes()),
+                         // modulus (n)
+                         asn1.create(asn1.Class.UNIVERSAL,
+                                     asn1.Type.INTEGER,
+                                     false,
+                                     _bnToBytes(key.n)),
+                         // publicExponent (e)
+                         asn1.create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                                     asn1.Type.INTEGER,
+                                     false,
+                                     _bnToBytes(key.e)),
+                         // privateExponent (d)
+                         asn1.create(asn1.Class.UNIVERSAL,
+                                     asn1.Type.INTEGER,
+                                     false,
+                                     _bnToBytes(key.d)),
+                         // privateKeyPrime1 (p)
+                         asn1.create(asn1.Class.UNIVERSAL,
+                                     asn1.Type.INTEGER,
+                                     false,
+                                     _bnToBytes(key.p)),
+                         // privateKeyPrime2 (q)
+                         asn1.create(asn1.Class.UNIVERSAL,
+                                     asn1.Type.INTEGER,
+                                     false,
+                                     _bnToBytes(key.q)),
+                         // privateKeyExponent1 (dP)
+                         asn1.create(asn1.Class.UNIVERSAL,
+                                     asn1.Type.INTEGER,
+                                     false,
+                                     _bnToBytes(key.dP)),
+                         // privateKeyExponent2 (dQ)
+                         asn1.create(asn1.Class.UNIVERSAL,
+                                     asn1.Type.INTEGER,
+                                     false,
+                                     _bnToBytes(key.dQ)),
+                         // coefficient (qInv)
+                         asn1.create(asn1.Class.UNIVERSAL,
+                                     asn1.Type.INTEGER,
+                                     false,
+                                     _bnToBytes(key.qInv))
   ]);
 };
-
+#endif
+namespace Forge
+{
+namespace PKI
+{
+namespace V2
+{
+template<typename KeyType>
+juce::var privateKeyToAsn1(const KeyType& key)
+{
+    // RSAPrivateKey
+    using namespace Forge::ASN1::V2;
+    return create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                  ASN1::Type::SEQUENCE,//asn1.Type.SEQUENCE,
+                  true,
+                  juce::Array<juce::var>{//[
+      // version (0 = only 2 primes, 1 multiple primes)
+                           create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                                  ASN1::Type::INTEGER,//asn1.Type.INTEGER,
+                                  false,
+//                                  asn1.integerToDer(0).getBytes()),
+                                  Forge::ASN1::V2::integerToDer(0)),
+                           // modulus (n)
+                           create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                                  ASN1::Type::INTEGER,//asn1.Type.INTEGER,
+                                  false,
+                                  _bnToBytes(key.getModulus())),
+                           // publicExponent (e)
+                           create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                                  ASN1::Type::INTEGER,//asn1.Type.INTEGER,
+                                  false,
+                                  _bnToBytes(key.getExponent())),
+                           // privateExponent (d)
+                           create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                                  ASN1::Type::INTEGER,//asn1.Type.INTEGER,
+                                  false,
+                                  _bnToBytes(key.getD())),
+                           // privateKeyPrime1 (p)
+                           create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                                  ASN1::Type::INTEGER,//asn1.Type.INTEGER,
+                                  false,
+                                  _bnToBytes(key.getP())),
+                           // privateKeyPrime2 (q)
+                           create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                                  ASN1::Type::INTEGER,//asn1.Type.INTEGER,
+                                  false,
+                                  _bnToBytes(key.getQ())),
+                           // privateKeyExponent1 (dP)
+                           create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                                  ASN1::Type::INTEGER,//asn1.Type.INTEGER,
+                                  false,
+                                  _bnToBytes(key.get_dP())),
+                           // privateKeyExponent2 (dQ)
+                           create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                                  ASN1::Type::INTEGER,//asn1.Type.INTEGER,
+                                  false,
+                                  _bnToBytes(key.get_dQ())),
+                           // coefficient (qInv)
+                           create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
+                                  ASN1::Type::INTEGER,//asn1.Type.INTEGER,
+                                  false,
+                                  _bnToBytes(key.getQInv()))
+//    ]);
+    });
+}
+} //end namespace V2
+} //end namespace PKI
+} //end namespace Forge
 /**
  * Converts a public key from an ASN.1 SubjectPublicKeyInfo or RSAPublicKey.
  *
@@ -1491,7 +1792,6 @@ pki.privateKeyToAsn1 = pki.privateKeyToRSAPrivateKey = function(key) {
  *
  * @return the public key.
  */
-#endif
 namespace Forge
 {
 namespace PKI
@@ -2033,19 +2333,7 @@ juce::var publicKeyToAsn1(const KeyType& key)
   ]);
 #endif
     const auto& oids = PKI::oids();
-    auto oid = [&]() -> juce::String
-    {
-        for( auto [k, o] : oids )
-        {
-            if( o == "rsaEncryption" )
-            {
-                return k; //return the long version ID code xxxxxx.xx.xxxx.xx.xx.x.x
-            }
-        }
-        
-        jassertfalse;
-        return {};
-    }();
+    auto oid = Forge::PKI::V1::findOID("rsaEncryption");
     
     if( oid.isEmpty() )
     {
@@ -2091,8 +2379,6 @@ juce::var publicKeyToAsn1(const KeyType& key)
     return asn1;
 }
 
-juce::MemoryBlock _bnToBytes(const juce::BigInteger& b);
-
 template<typename KeyType>
 juce::var publicKeyToRSAPublicKey(const KeyType& key)
 {
@@ -2135,6 +2421,8 @@ juce::var publicKeyToRSAPublicKey(const KeyType& key)
 } //end namespace V2
 namespace V1
 {
+
+juce::String findOID(juce::String oidToFind);
 //forward declaration:
 template<typename KeyType>
 ASN1::V1::ASNObject::Ptr publicKeyToRSAPublicKey(KeyType key);
@@ -2187,19 +2475,7 @@ ASNType publicKeyToAsn1(KeyType key)
 //    asn1.create(asn1.Class.UNIVERSAL, asn1.Type.OID, false,
 //      asn1.oidToDer(pki.oids.rsaEncryption).getBytes()),
     const auto& oids = PKI::oids();
-    auto oid = [&]() -> juce::String
-    {
-        for( auto [k, o] : oids )
-        {
-            if( o == "rsaEncryption" )
-            {
-                return k; //return the long version ID code xxxxxx.xx.xxxx.xx.xx.x.x
-            }
-        }
-        
-        jassertfalse;
-        return {};
-    }();
+    auto oid = findOID("rsaEncryption");
     
     if( oid.isEmpty() )
     {
