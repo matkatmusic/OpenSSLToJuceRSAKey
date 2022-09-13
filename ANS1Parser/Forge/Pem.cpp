@@ -363,7 +363,7 @@ juce::String encode(const juce::var& msg, const juce::NamedValueSet& options)
     }
     
     // add body
-//    rval += forge.util.encode64(msg.body, options.maxline || 64) + '\r\n';
+//    var body = forge.util.encode64(msg.body, options.maxline || 64) + '\r\n';
     jassert( msg.hasProperty("body") );
     jassert( msg["body"].isBinaryData() );
     auto* memBlockBody = msg["body"].getBinaryData();
@@ -379,14 +379,20 @@ juce::String encode(const juce::var& msg, const juce::NamedValueSet& options)
     }();
     
     int i = 0;
+    juce::String body;
     while( i < b64.length() )
     {
-        rval << b64.substring(i, maxLineLength );
+        auto subStr = b64.substring(i, i + maxLineLength );
+//        DBG( "subStr: " << subStr );
+        body << subStr;
         i += maxLineLength;
         if( i < b64.length() )
-            rval << "\r\n";
+            body << "\r\n";
     }
     
+    DBG( "body: " << body ); //console.log(`body: ${body}`);
+    rval << body;
+    rval << "\r\n";
 //    rval += '-----END ' + msg.type + '-----\r\n';
     rval << "-----END ";
     rval << msg["type"].toString();
