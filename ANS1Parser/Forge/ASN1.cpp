@@ -817,6 +817,197 @@ namespace V2
 {
 juce::var toDer(const juce::var& obj)
 {
+    auto bytesBlock = juce::MemoryBlock();                                   //var bytes = forge.util.createBuffer();
+    auto bytes = juce::MemoryOutputStream(bytesBlock, false);
+                                                                        //
+    // build the first byte                                             //// build the first byte
+    juce::uint8 b1 = static_cast<juce::uint8>(static_cast<int>(obj["tagClass"])) | static_cast<juce::uint8>(static_cast<int>(obj["type"]));                                   //var b1 = obj.tagClass | obj.type;
+                                                                        //
+    // for storing the ASN.1 value                                      //// for storing the ASN.1 value
+    auto valueBlock = juce::MemoryBlock();                              //var value = forge.util.createBuffer();
+    auto value = juce::MemoryOutputStream(valueBlock, false);
+                                                                        //
+    // use BIT STRING contents if available and data not changed        //// use BIT STRING contents if available and data not changed
+    bool useBitStringContents = false;                                   //var useBitStringContents = false;
+    if( obj.hasProperty("bitStringContents") )                                      //if('bitStringContents' in obj)
+    {                                                                   //{
+        useBitStringContents = true;                                    //    useBitStringContents = true;
+        if(static_cast<bool>(obj["original"]))                                                //    if(obj.original)
+        {                                                               //    {
+            jassertfalse; //not used in JS tests      //        useBitStringContents = asn1.equals(obj, obj.original);
+        }                                                               //    }
+    }                                                                   //}
+                                                                        //
+    if(useBitStringContents)                                            //if(useBitStringContents)
+    {                                                                   //{
+        jassertfalse;                         //    value.putBytes(obj.bitStringContents);
+        auto mb = *obj["bitStringContents"].getBinaryData();
+        juce::MemoryInputStream mis(mb, false);
+        value.writeFromInputStream(mis, mb.getSize());
+    }                                                                   //}
+    else if(obj["composed"].equalsWithSameType(true))                                               //else if(obj.composed)
+    {                                                                   //{
+        // if composed, use each child asn1 object's DER bytes as value
+        // turn on 6th bit (0x20 = 32) to indicate asn1 is constructed
+        // from other asn1 objects
+        if(obj["constructed"].equalsWithSameType(true))                                             //    if(obj.constructed)
+        {                                                               //    {
+            b1 |= 0x20;                                                 //        b1 |= 0x20;
+        }                                                               //    }
+        else                                                            //    else
+        {                                                               //    {
+            // type is a bit string, add unused bits of 0x00            //        // type is a bit string, add unused bits of 0x00
+            value.writeByte(0x00);                                        //        value.putByte(0x00);
+        }                                                               //    }
+                                                                        //
+        // add all of the child DER bytes together                      //    // add all of the child DER bytes together
+        jassert(obj.hasProperty("value"));
+        jassert(obj["value"].isArray());
+        if( ! obj["value"].isArray() )
+        {
+            jassertfalse;
+            return {};
+        }
+        
+        const auto& arr = *obj["value"].getArray();
+        for( int i = 0; i < arr.size(); ++i )                       //    for(var i = 0; i < obj.value.length; ++i)
+        {                                                               //    {
+            if(! arr[i].isUndefined() )                              //        if(obj.value[i] !== undefined)
+            {                                                           //        {
+                auto der = ASN1::V2::toDer(arr[i]);                     //            var der = asn1.toDer(obj.value[i]);
+                jassert(der.isBinaryData());
+                auto memoryBlockToAdd = *der.getBinaryData();
+                DBG( "ASN1::toDer(varToAdd:" );                  //            console.log("ASN1::toDer(varToAdd:");
+                DBG( juce::String::toHexString(memoryBlockToAdd.getData(), memoryBlockToAdd.getSize(), 0));                               //            console.log(der.toHex());
+                auto mis = juce::MemoryInputStream(memoryBlockToAdd, false);
+                value.writeFromInputStream(mis, mis.getNumBytesRemaining());                                   //            value.putBuffer(der);
+            }                                                           //        }
+        }                                                               //    }
+    }                                                                   //}
+    else                                                                //else
+    {                                                                   //{
+        // use asn1.value directly                                      //    // use asn1.value directly
+        if(obj["type"].equalsWithSameType(static_cast<int>(ASN1::Type::BMPSTRING)))                            //    if(obj.type === asn1.Type.BMPSTRING)
+        {                                                               //    {
+            jassertfalse; //this if() is not hit in the javascript for the PEM file we're working with
+            jassert(obj["value"].isBinaryData());
+            auto mb = *obj["value"].getBinaryData();
+            /*
+             javascript uses UTF16 characters, and stores them in Big Endian
+             //TODO: cite this to confirm.
+             */
+            juce::MemoryInputStream mis(mb, false);
+            while(! mis.isExhausted() )                   //        for(var i = 0; i < obj.value.length; ++i)
+            {                                                           //        {
+                auto shValue = mis.readShortBigEndian();
+                value.writeShortBigEndian( shValue );                //            value.putInt16(obj.value.charCodeAt(i));
+            }                                                           //        }
+        }                                                               //    }
+        else                                                            //    else
+        {                                                               //    {
+            jassert(obj.hasProperty("type"));
+            jassert(obj.hasProperty("value"));
+            auto v = obj["value"];
+            if(! v.isBinaryData() && ! obj["value"].isVoid() )
+            {
+                jassertfalse;
+                return {};
+            }
+            
+            const auto bd = *obj["value"].getBinaryData();
+            juce::MemoryInputStream mis(bd, false);
+            // ensure integer is minimally-encoded
+            // TODO: should all leading bytes be stripped vs just one?
+            // .. ex '00 00 01' => '01'?
+            if(obj["type"].equalsWithSameType(static_cast<int>(ASN1::Type::INTEGER)) &&                        //        if(obj.type === asn1.Type.INTEGER &&
+               bd.getSize() > 1 &&                                  //           obj.value.length > 1 &&
+               // leading 0x00 for positive integer                     //           // leading 0x00 for positive integer
+               ((static_cast<juce::uint8>(bd[0]) == 0 &&                       //           ((obj.value.charCodeAt(0) === 0 &&
+                 (static_cast<juce::uint8>(bd[1]) & 0x80) == 0) ||             //             (obj.value.charCodeAt(1) & 0x80) === 0) ||
+                // leading 0xFF for negative integer                    //            // leading 0xFF for negative integer
+                 (static_cast<juce::uint8>(bd[0]) == 0xFF &&                    //            (obj.value.charCodeAt(0) === 0xFF &&
+                  (static_cast<juce::uint8>(bd[1]) & 0x80) == 0x80)))           //             (obj.value.charCodeAt(1) & 0x80) === 0x80)))
+            {                                                           //        {
+                mis.readByte(); //this advances the read position by 1
+                auto pos = mis.getPosition();
+                auto bytesToPut = juce::MemoryBlock();
+                auto mos = juce::MemoryOutputStream(bytesToPut, false);
+                mos.writeFromInputStream(mis, mis.getNumBytesRemaining());                   //            var bytesToPut = obj.value.substr(1);
+                mos.flush();
+                DBG("bytesToPut: " << juce::String::toHexString(bytesToPut.getData(), //            console.log(`bytesToPut: ${bytesToPut}`);
+                                                                bytesToPut.getSize(),
+                                                                0));
+                mis.setPosition(pos);
+                value.writeFromInputStream(mis, mis.getNumBytesRemaining());                             //            value.putBytes(bytesToPut);
+            }                                                           //        }
+            else                                                        //        else
+            {                                                           //        {
+                auto pos = mis.getPosition();
+                auto bytesToPut = juce::MemoryBlock();
+                auto mos = juce::MemoryOutputStream(bytesToPut, false);
+                mos.writeFromInputStream(mis, mis.getNumBytesRemaining());
+                mos.flush();
+                DBG( "obj.value: " << juce::String::toHexString(bytesToPut.getData(),
+                                                                bytesToPut.getSize(),
+                                                                0));
+                mis.setPosition(pos);
+                value.writeFromInputStream(mis, mis.getNumBytesRemaining());                              //            value.putBytes(obj.value);
+            }                                                           //        }
+        }                                                               //    }
+    }                                                                   //}
+                                                                        //
+    // add tag byte                                                     //// add tag byte
+    bytes.writeByte(b1);                                                  //bytes.putByte(b1);
+                                                                        //
+    value.flush(); //this trims the size of valueBlock to the length of data actually written to valueBlock.  see documentation tooltip
+    // use "short form" encoding                                        //// use "short form" encoding
+    if(valueBlock.getSize() <= 127)                                           //if(value.length() <= 127)
+    {                                                                   //{
+        // one byte describes the length                                //    // one byte describes the length
+        // bit 8 = 0 and bits 7-1 = length                              //    // bit 8 = 0 and bits 7-1 = length
+        bytes.writeByte(valueBlock.getSize() & 0x7F);                           //    bytes.putByte(value.length() & 0x7F);
+    }                                                                   //}
+    else                                                                //else
+    {                                                                   //{
+        // use "long form" encoding
+        // 2 to 127 bytes describe the length
+        // first byte: bit 8 = 1 and bits 7-1 = # of additional bytes
+        // other bytes: length in base 256, big-endian
+        auto len = valueBlock.getSize();                                       //    var len = value.length();
+        /*
+         NOTE: Juce doesn't support memoryBlocks with a size that requires more than 8 bytes to represent.
+         The JS code is strange
+         It appears to create a string from the length bytes in big-endian
+         */
+        juce::MemoryBlock lenBytesBlock;
+        juce::MemoryOutputStream lenBytes(lenBytesBlock, false);                                              //    var lenBytes = '';
+        do                                                              //    do
+        {                                                               //    {
+            lenBytes.writeByte(len & 0xFF);                //        lenBytes += String.fromCharCode(len & 0xFF);
+            len = len >> 8;                                            //        len = len >>> 8;
+        }                                                               //    }
+        while(len > 0);                                                 //    while(len > 0);
+        lenBytes.flush();
+                                                                        //
+        // set first byte to # bytes used to store the length and turn on
+        // bit 8 to indicate long-form length is used
+        bytes.writeByte(lenBytesBlock.getSize() | 0x80);                          //    bytes.putByte(lenBytes.length | 0x80);
+                                                                        //
+        // concatenate length bytes in reverse since they were generated
+        // little endian and we need big endian
+        for( int i = lenBytesBlock.getSize() - 1; i >= 0; --i )                   //    for(var i = lenBytes.length - 1; i >= 0; --i)
+        {                                                               //    {
+            bytes.writeByte(lenBytesBlock[i]);                      //        bytes.putByte(lenBytes.charCodeAt(i));
+        }                                                               //    }
+    }                                                                   //}
+                                                                        //
+    // concatenate value bytes                                          //// concatenate value bytes
+    juce::MemoryInputStream mis(valueBlock, false);
+    bytes.writeFromInputStream(mis, mis.getNumBytesRemaining());                                             //bytes.putBuffer(value);
+    bytes.flush();
+    DBG("toDer() result: " << juce::String::toHexString(bytesBlock.getData(), bytesBlock.getSize(), 0) );                    //console.log(`toDer() result: ${bytes.toHex()}`);
+    return bytesBlock;                                                       //return bytes;
+#if false
 //asn1.toDer = function(obj)
 //{
 //    var bytes = forge.util.createBuffer();
@@ -1085,6 +1276,7 @@ juce::var toDer(const juce::var& obj)
     bytes.flush();
     DBG("toDer() result: " << juce::String::toHexString(bytesBlock.getData(), bytesBlock.getSize(), 0) );
     return bytesBlock;
+#endif
 }
 
 bool validate(const juce::var& obj,
