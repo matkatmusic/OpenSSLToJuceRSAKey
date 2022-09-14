@@ -79,6 +79,249 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
                              juce::NamedValueSet options)
 {
     using NV = juce::NamedValueSet::NamedValue;
+    // temporary storage for consumption calculations
+    //
+    // minimum length for ASN.1 DER structure is 2
+    V1::_checkBufferLength(bytes, remaining, 2);//_checkBufferLength(bytes, remaining, 2);
+    //
+    DBG("_fromDer( remaining: " << remaining << ", depth: " << depth << ", bytes: )");//console.log("_fromDer( remaining: %d, depth: %d, bytes: )", remaining, depth );
+    auto pos = bytes.getPosition();//var pos = bytes.read;
+    {
+        juce::MemoryBlock mb(remaining);
+        juce::MemoryOutputStream mos(mb, false);
+        mos.writeFromInputStream(bytes, remaining);
+        mos.flush();
+        DBG( juce::String::toHexString(mb.getData(), mb.getSize(), 0) );//console.log(forge.util.binary.hex.encode(bytes.getBytes(remaining)));
+    }
+    bytes.setPosition(pos);//bytes.read = pos;
+    // get the first byte//// get the first byte
+    juce::uint8 b1;
+    auto numRead = bytes.read(&b1, 1);//var b1 = bytes.getByte();
+    if( numRead != 1 )
+    {
+        jassertfalse;
+        return {};
+    }
+    // consumed one byte//// consumed one byte
+    remaining--;//remaining--;
+    //
+    // get the tag class//// get the tag class
+    Class tagClass = static_cast<Class>(b1 & 0xc0);//var tagClass = (b1 & 0xC0);
+    //
+    // get the type (bits 1-5)//// get the type (bits 1-5)
+    Type type = static_cast<Type>(b1 & 0x1f);//var type = b1 & 0x1F;
+    //
+    // get the variable value length and adjust remaining bytes//// get the variable value length and adjust remaining bytes
+    auto start = bytes.getNumBytesRemaining();//start = bytes.length();
+    auto length = V1::_getValueLength(bytes, remaining);//var length = _getValueLength(bytes, remaining);
+    remaining -= start - bytes.getNumBytesRemaining();//remaining -= start - bytes.length();
+    //
+    // ensure there are enough bytes to get the value//// ensure there are enough bytes to get the value
+    if( length > remaining ) //if(length !== undefined && length > remaining)
+    {//{
+        if(options["strict"].equalsWithSameType(true)) //    if(options.strict)
+        {//    {
+            DBG( "Too few bytes to read ASN.1 value." );//        var error = new Error('Too few bytes to read ASN.1 value.');
+            DBG( "available: " << bytes.getNumBytesRemaining() );//        error.available = bytes.length();
+            DBG( "remaining: " << remaining );//        error.remaining = remaining;
+            DBG( "requested: " << length );//        error.requested = length;
+            jassertfalse; return {};//        throw error;
+        }//    }
+        //    // Note: be lenient with truncated values and use remaining state bytes
+        length = remaining;//    length = remaining;
+    }//}
+    //
+    // value storage//// value storage
+    juce::var value;//var value;
+    //// possible BIT STRING contents storage
+    juce::MemoryBlock bitStringContents;//var bitStringContents;
+    //
+    // constructed flag is bit 6 (32 = 0x20) of the first byte//// constructed flag is bit 6 (32 = 0x20) of the first byte
+    bool constructed = ((b1 & 0x20) == 0x20);//var constructed = ((b1 & 0x20) === 0x20);
+    if(constructed) //if(constructed)
+    {//{
+        // parse child asn1 objects from the value//    // parse child asn1 objects from the value
+        value = juce::Array<juce::var>();//    value = [];
+        if(length == -1) //    if(length === undefined)
+        {//    {
+            // asn1 object of indefinite length, read until end tag//        // asn1 object of indefinite length, read until end tag
+            for(;;) //        for(;;)
+            {//        {
+                V1::_checkBufferLength(bytes, remaining, 2);//            _checkBufferLength(bytes, remaining, 2);
+                auto pos = bytes.getPosition();
+                juce::uint16 twoBytes = bytes.readShortBigEndian();
+                bytes.setPosition(pos);
+                if(twoBytes == 0)                                                       //            if(bytes.bytes(2) === String.fromCharCode(0, 0))
+                {                                                                       //            {
+                    bytes.readShortBigEndian();                                         //                bytes.getBytes(2);
+                    remaining -= 2;                                                     //                remaining -= 2;
+                    break;                                                              //                break;
+                }                                                                       //            }
+                start = bytes.getNumBytesRemaining();                                   //            start = bytes.length();
+                DBG( "creating value from push(_fromDer()) with indefinite length");    //            console.log( "creating value from push(_fromDer()) with indefinite length");
+                value.append(_fromDer(bytes, remaining, depth + 1, options));           //            value.push(_fromDer(bytes, remaining, depth + 1, options));
+                remaining -= start - bytes.getNumBytesRemaining();                      //            remaining -= start - bytes.length();
+            }//        }
+        } //    }
+        else //    else
+        {//    {
+            // parsing asn1 object of definite length//        // parsing asn1 object of definite length
+            while(length > 0) //        while(length > 0)
+            {//        {
+                start = bytes.getNumBytesRemaining();//            start = bytes.length();
+                DBG( "creating value from push(_fromDer()) with definite length");//            console.log( "creating value from push(_fromDer()) with definite length");
+                value.append(_fromDer(bytes, length, depth + 1, options));//            value.push(_fromDer(bytes, length, depth + 1, options));
+                remaining -= start - bytes.getNumBytesRemaining();//            remaining -= start - bytes.length();
+                length -= start - bytes.getNumBytesRemaining();//            length -= start - bytes.length();
+            }//        }
+        }//    }
+    }//}
+    //
+    // if a BIT STRING, save the contents including padding
+    if((value.isUndefined() || value.isVoid()) && //if(value === undefined &&
+       tagClass == ASN1::Class::UNIVERSAL && //tagClass === asn1.Class.UNIVERSAL &&
+       type == ASN1::Type::BITSTRING)  //type === asn1.Type.BITSTRING)
+    {//{
+        auto pos = bytes.getPosition();
+        juce::MemoryOutputStream mos(bitStringContents, false);
+        mos.writeFromInputStream(bytes, length);//    bitStringContents = bytes.bytes(length);
+        bytes.setPosition(pos);
+    }//}
+    //
+    // determine if a non-constructed value should be decoded as a composed
+    // value that contains other ASN.1 objects. BIT STRINGs (and OCTET STRINGs)
+    // can be used this way.
+    if((value.isUndefined() || value.isVoid()) &&   //if(value === undefined &&
+       options["decodeBitStrings"].equalsWithSameType(true) &&// options.decodeBitStrings &&
+       tagClass == ASN1::Class::UNIVERSAL &&//   tagClass === asn1.Class.UNIVERSAL &&
+       // FIXME: OCTET STRINGs not yet supported here
+       // .. other parts of forge expect to decode OCTET STRINGs manually
+       (type == ASN1::Type::BITSTRING /*|| type === asn1.Type.OCTETSTRING*/) &&//   (type === asn1.Type.BITSTRING /*|| type === asn1.Type.OCTETSTRING*/) &&
+       length > 1) //   length > 1)
+    {//{
+        // save read position//    // save read position
+        auto savedRead = bytes.getPosition();//    var savedRead = bytes.read;
+        auto savedRemaining = remaining;//    var savedRemaining = remaining;
+        juce::uint8 unused = 0;//    var unused = 0;
+        if(type == ASN1::Type::BITSTRING) //    if(type === asn1.Type.BITSTRING)
+        {//    {
+            /* The first octet gives the number of bits by which the length of the
+             bit string is less than the next multiple of eight (this is called
+             the "number of unused bits").
+             The second and following octets give the value of the bit string
+             converted to an octet string. */
+            V1::_checkBufferLength(bytes, remaining, 1);//        _checkBufferLength(bytes, remaining, 1);
+            unused = bytes.readByte();//        unused = bytes.getByte();
+            remaining--;//        remaining--;
+        }//    }
+        // if all bits are used, maybe the BIT/OCTET STRING holds ASN.1 objs//    // if all bits are used, maybe the BIT/OCTET STRING holds ASN.1 objs
+        if(unused == 0) //    if(unused === 0)
+        {//    {
+            //try //        try
+            {//        {
+                // attempt to parse child asn1 object from the value//            // attempt to parse child asn1 object from the value
+                // (stored in array to signal composed value)//            // (stored in array to signal composed value)
+                start = bytes.getNumBytesRemaining();//            start = bytes.length();
+                auto subOptions = juce::NamedValueSet(//            var subOptions =
+                {//            {
+                    // enforce strict mode to avoid parsing ASN.1 from plain data//                // enforce strict mode to avoid parsing ASN.1 from plain data
+                    NV("strict", true),//            strict: true,
+                    NV("decodeBitStrings", true)//            decodeBitStrings: true
+                });//            };
+                auto composed = _fromDer(bytes, remaining, depth + 1, subOptions);//            var composed = _fromDer(bytes, remaining, depth + 1, subOptions);
+                auto used = start - bytes.getNumBytesRemaining();//            var used = start - bytes.length();
+                remaining -= used;//            remaining -= used;
+                if(type == ASN1::Type::BITSTRING) //            if(type == asn1.Type.BITSTRING)
+                {//            {
+                    used++;//                used++;
+                }//            }
+    //
+                // if the data all decoded and the class indicates UNIVERSAL or//            // if the data all decoded and the class indicates UNIVERSAL or
+                // CONTEXT_SPECIFIC then assume we've got an encapsulated ASN.1 object//            // CONTEXT_SPECIFIC then assume we've got an encapsulated ASN.1 object
+                auto tc = static_cast<Class>(static_cast<int>(composed["tagClass"]));//            var tc = composed.tagClass;
+                if(used == length &&//            if(used === length &&
+                   (tc == ASN1::Class::UNIVERSAL || tc == ASN1::Class::CONTEXT_SPECIFIC)) //               (tc === asn1.Class.UNIVERSAL || tc === asn1.Class.CONTEXT_SPECIFIC))
+                { //            {
+                    DBG( "creating value = [composed];");//                console.log( "creating value = [composed];");
+                    value = juce::Array<juce::var>();//                value = [composed];
+                    value.append(composed);
+                }//            }
+            } //        }
+            //catch(ex) //        catch(ex)
+            {//        {
+            }//        }
+        }//    }
+        if(value.isUndefined() || value.isVoid()) //    if(value === undefined)
+        {//    {
+            // restore read position//        // restore read position
+            bytes.setPosition(savedRead);//        bytes.read = savedRead;
+            remaining = savedRemaining;//        remaining = savedRemaining;
+        }//    }
+    }//}
+    //
+    if(value.isUndefined() || value.isVoid()) //if(value === undefined)
+    {//{
+        // asn1 not constructed or composed, get raw value//    // asn1 not constructed or composed, get raw value
+        // TODO: do DER to OID conversion and vice-versa in .toDer?//    // TODO: do DER to OID conversion and vice-versa in .toDer?
+    //
+        if(length == -1) //    if(length === undefined)
+        {//    {
+            if(options["strict"].equalsWithSameType(true)) //        if(options.strict)
+            {//        {
+                DBG( "Non-constructed ASN.1 object of indefinite length.");//            throw new Error('Non-constructed ASN.1 object of indefinite length.');
+                jassertfalse;
+            }//        }
+            // be lenient and use remaining state bytes//        // be lenient and use remaining state bytes
+            length = remaining;//        length = remaining;
+        }//    }
+    //
+        if(type == ASN1::Type::BMPSTRING) //    if(type === asn1.Type.BMPSTRING)
+        {//    {
+            auto tempStr = juce::String();//        value = '';
+            DBG( "creating value from String.fromCharCode(bytes.getInt16());"); //        console.log( "creating value from String.fromCharCode(bytes.getInt16());");
+            for(; length > 0; length -= 2) //        for(; length > 0; length -= 2)
+            {//        {
+                V1::_checkBufferLength(bytes, remaining, 2);//            _checkBufferLength(bytes, remaining, 2);
+                auto shortBE = bytes.readShortBigEndian();
+                auto utf16 = juce::CharPointer_UTF16( &shortBE );
+                auto utf16Str = juce::String(utf16);
+                tempStr += utf16Str;//            value += String.fromCharCode(bytes.getInt16());
+                remaining -= 2;//            remaining -= 2;
+            }//        }
+            value = tempStr;
+        } //    }
+        else //    else
+        {//    {
+            juce::MemoryBlock mb;
+            {
+                juce::MemoryOutputStream mos(mb, false);
+                mos.writeFromInputStream(bytes, length);
+            }
+            DBG( "creating value from bytes.getBytes(" << length << ")");//        console.log( `creating value from bytes.getBytes(${length})`);
+            value = mb;//        value = bytes.getBytes(length);
+            remaining -= length;//        remaining -= length;
+        }//    }
+    }//}
+    //
+    // console.log( "_fromDer() final 'value' before asn1.create():  " );//// console.log( "_fromDer() final 'value' before asn1.create():  " );
+    // varPrinter(value);//// varPrinter(value);
+      //
+    // add BIT STRING contents if available//// add BIT STRING contents if available
+    juce::NamedValueSet asn1Options;
+    if(! bitStringContents.isEmpty() ) //var asn1Options = bitStringContents === undefined ? null :
+    {//{
+        asn1Options.set("bitStringContents", bitStringContents);//    bitStringContents: bitStringContents
+    };//};
+    //
+    
+    if( value.isVoid() )
+    {
+        jassertfalse;
+    }
+    // create and return asn1 object//// create and return asn1 object
+    return create(tagClass, type, constructed, value, asn1Options); //return asn1.create(tagClass, type, constructed, value, asn1Options);
+#if false
+    using NV = juce::NamedValueSet::NamedValue;
     // minimum length for ASN.1 DER structure is 2
     V1::_checkBufferLength(bytes, remaining, 2);
     
@@ -321,6 +564,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
     
     // create and return asn1 object
     return create(tagClass, type, constructed, value, asn1Options);
+#endif
 }
 } //end namespace V2
 } //end namespace ASN1
@@ -461,9 +705,14 @@ juce::var create(Class tagClass,
         juce::var tmp = juce::Array<juce::var>();
         for(int i = 0; i < arr.size(); ++i)
         {
-            if(! arr[i].isVoid())
+            auto entry = arr[i];
+            if(! entry.isVoid() && !entry.isUndefined())
             {
-                tmp.append(arr[i]);
+                tmp.append(entry);
+            }
+            else
+            {
+                jassertfalse;
             }
         }
         value = tmp;
@@ -821,7 +1070,8 @@ juce::var toDer(const juce::var& obj)
     auto bytes = juce::MemoryOutputStream(bytesBlock, false);
                                                                         //
     // build the first byte                                             //// build the first byte
-    juce::uint8 b1 = static_cast<juce::uint8>(static_cast<int>(obj["tagClass"])) | static_cast<juce::uint8>(static_cast<int>(obj["type"]));                                   //var b1 = obj.tagClass | obj.type;
+    juce::uint8 b1 = static_cast<juce::uint8>(static_cast<int>(obj["tagClass"])) | //var b1 = obj.tagClass | obj.type;
+                     static_cast<juce::uint8>(static_cast<int>(obj["type"]));
                                                                         //
     // for storing the ASN.1 value                                      //// for storing the ASN.1 value
     auto valueBlock = juce::MemoryBlock();                              //var value = forge.util.createBuffer();
@@ -872,9 +1122,10 @@ juce::var toDer(const juce::var& obj)
         const auto& arr = *obj["value"].getArray();
         for( int i = 0; i < arr.size(); ++i )                       //    for(var i = 0; i < obj.value.length; ++i)
         {                                                               //    {
-            if(! arr[i].isUndefined() )                              //        if(obj.value[i] !== undefined)
+            auto entry = arr[i];
+            if(! entry.isUndefined() && !entry.isVoid())                              //        if(obj.value[i] !== undefined)
             {                                                           //        {
-                auto der = ASN1::V2::toDer(arr[i]);                     //            var der = asn1.toDer(obj.value[i]);
+                auto der = ASN1::V2::toDer(entry);                     //            var der = asn1.toDer(obj.value[i]);
                 jassert(der.isBinaryData());
                 auto memoryBlockToAdd = *der.getBinaryData();
                 DBG( "ASN1::toDer(varToAdd:" );                  //            console.log("ASN1::toDer(varToAdd:");
@@ -908,7 +1159,7 @@ juce::var toDer(const juce::var& obj)
             jassert(obj.hasProperty("type"));
             jassert(obj.hasProperty("value"));
             auto v = obj["value"];
-            if(! v.isBinaryData() && ! obj["value"].isVoid() )
+            if(! v.isBinaryData() && obj["value"].isVoid() )
             {
                 jassertfalse;
                 return {};
