@@ -24,40 +24,35 @@ namespace V2
  */
 juce::MemoryBlock _bnToBytes(const juce::BigInteger& b)
 {
-    auto mb = b.toMemoryBlock();
-    
-    juce::MemoryBlock output;
-    
-    {
-        juce::MemoryOutputStream mos(output, false);
-        
-        for(int i = mb.getSize() - 1; i >= 0; --i )
+    // prepend 0x00 if first byte >= 0x80
+    auto hex = b.toString(16);                                      //var hex = b.toString(16);
+    if(hex.substring(0, 1)[0] >= '8')                               //if(hex[0] >= '8')
+    {                                                               //{
+        hex = "00" + hex;                                           //    hex = '00' + hex;
+    }                                                               //}
+    DBG( "hex: " << hex );                                          //console.log(`hex: ${hex}`);
+    auto bytes = juce::MemoryBlock();                               //var bytes = forge.util.hexToBytes(hex);
+    bytes.loadFromHexString(hex);
+                                                                    //
+    // ensure integer is minimally-encoded                          //// ensure integer is minimally-encoded
+    if(bytes.getSize() > 1 &&                                       //if(bytes.length > 1 &&
+       // leading 0x00 for positive integer                         //   // leading 0x00 for positive integer
+       ((static_cast<juce::uint8>(bytes[0]) == 0 &&                 //   ((bytes.charCodeAt(0) === 0 &&
+         (static_cast<juce::uint8>(bytes[1]) & 0x80) == 0) ||       //     (bytes.charCodeAt(1) & 0x80) === 0) ||
+        // leading 0xFF for negative integer                        //    // leading 0xFF for negative integer
+        (static_cast<juce::uint8>(bytes[0]) == 0xFF &&              //    (bytes.charCodeAt(0) === 0xFF &&
+         (static_cast<juce::uint8>(bytes[1]) & 0x80) == 0x80)))     //     (bytes.charCodeAt(1) & 0x80) === 0x80)))
+    {                                                               //{
+        juce::MemoryBlock trimmed;
         {
-            mos.writeByte(mb[i]); //write to output in Big-Endian (aka reversed) order
+            juce::MemoryInputStream mis(bytes, false);
+            mis.readByte();
+            mis.readIntoMemoryBlock(trimmed);
         }
-    } //mos goes out of scope, calls 'flush()', finishing the write operation to 'output'
-
-    auto hex = juce::String::toHexString(output.getData(), output.getSize(), 0);
-    if( static_cast<juce::uint8>(output[0]) >= 0x80 )
-    {
-        hex = "00" + hex;
-        //insert the 00 at the beginning of `output`
-        decltype(output) tempMemBlock;
-        {
-            juce::MemoryOutputStream mos(tempMemBlock, false);
-            mos.writeByte(0);
-        } //mos goes out of scope, calls 'flush()', finishing the write operation to 'tempMemBlock'
+        return trimmed;                                             //    return bytes.substr(1);
         
-        //add all of 'output' to tempMemBlock
-        tempMemBlock.append(output.getData(), output.getSize());
-        
-        //replace output with tempMemBlock
-        output = tempMemBlock;
-    }
-    
-    DBG( "hex: " << hex );
-    
-    return output;
+    }                                                               //}
+    return bytes;                                                   //return bytes;
 }
 } //end namespace V2
 namespace V1
