@@ -639,11 +639,34 @@ namespace ASN1
 namespace V2
 {
 
-juce::MemoryBlock integerToDer(int x)
+juce::MemoryBlock integerToDer(juce::int32 x)
 {
     auto rval = juce::MemoryBlock();
     auto mos = juce::MemoryOutputStream(rval, false);
-    auto putSignedInt = [](int i, unsigned int n)
+    
+    auto putBytes = [](juce::MemoryOutputStream& data, const juce::MemoryBlock& bytes)
+    {
+        juce::MemoryInputStream mis(bytes, false);
+        data.writeFromInputStream(mis, mis.getNumBytesRemaining());
+    };
+    
+    auto putInt = [&mos, &putBytes](int i, juce::uint32 n)
+    {
+        V1::_checkBitsParam(n);//_checkBitsParam(n);
+        juce::MemoryBlock bytesBlock;//var bytes = '';
+        {
+        juce::MemoryOutputStream bytes(bytesBlock, false);
+        do//do
+        {//{
+            n -= 8; //    n -= 8;
+            bytes.writeByte((i >> n) & 0xFF); //    bytes += String.fromCharCode((i >> n) & 0xFF);
+        }//}
+        while(n > 0);//while(n > 0);
+        }
+        putBytes(mos, bytesBlock); //return this.putBytes(bytes);
+    };
+    
+    auto putSignedInt = [&putInt](int i, juce::uint32 n)
     {
         /**
          * Puts a signed n-bit integer in this buffer in big-endian order. Two's
@@ -662,27 +685,29 @@ juce::MemoryBlock integerToDer(int x)
         {
             i += 2 << (n - 1);
         }
-        return i;
+        putInt(i, n); //return this.putInt(i, n);
     };
     
     if(x >= -0x80 && x < 0x80) {
-        mos.writeIntBigEndian(putSignedInt(x, 8)); // return rval.putSignedInt(x, 8);
+//        mos.writeIntBigEndian(putSignedInt(x, 8)); // return rval.putSignedInt(x, 8);
+        putSignedInt(x, 8);
     }
     else if(x >= -0x8000 && x < 0x8000) {
-        mos.writeIntBigEndian(putSignedInt(x, 16));//return rval.putSignedInt(x, 16);
+       putSignedInt(x, 16);//return rval.putSignedInt(x, 16);
     }
     else if(x >= -0x800000 && x < 0x800000) {
-        mos.writeIntBigEndian(putSignedInt(x, 24));//return rval.putSignedInt(x, 24);
+        putSignedInt(x, 24);//return rval.putSignedInt(x, 24);
     }
     else if(x >= -0x80000000 && x < 0x80000000) {
-        mos.writeIntBigEndian(putSignedInt(x, 32));//return rval.putSignedInt(x, 32);
+        putSignedInt(x, 32);//return rval.putSignedInt(x, 32);
     }
     else
     {
         jassertfalse;
     }
     mos.flush();
-    
+    DBG( "integerToDer(" << x << "): " << juce::String::toHexString(rval.getData(),
+                                                                    rval.getSize(), 0));
     return rval;
 }
 

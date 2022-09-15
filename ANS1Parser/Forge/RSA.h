@@ -1778,42 +1778,42 @@ juce::var privateKeyToAsn1(const KeyType& key)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
                                   false,
-                                  _bnToBytes(key.getModulus())),
+                                  Forge::PKI::V2::_bnToBytes(key.getModulus())),
                            // publicExponent (e)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
                                   false,
-                                  _bnToBytes(key.getExponent())),
+                                  Forge::PKI::V2::_bnToBytes(key.getExponent())),
                            // privateExponent (d)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
                                   false,
-                                  _bnToBytes(key.getD())),
+                                  Forge::PKI::V2::_bnToBytes(key.getD())),
                            // privateKeyPrime1 (p)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
                                   false,
-                                  _bnToBytes(key.getP())),
+                                  Forge::PKI::V2::_bnToBytes(key.getP())),
                            // privateKeyPrime2 (q)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
                                   false,
-                                  _bnToBytes(key.getQ())),
+                                  Forge::PKI::V2::_bnToBytes(key.getQ())),
                            // privateKeyExponent1 (dP)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
                                   false,
-                                  _bnToBytes(key.get_dP())),
+                                  Forge::PKI::V2::_bnToBytes(key.get_dP())),
                            // privateKeyExponent2 (dQ)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
                                   false,
-                                  _bnToBytes(key.get_dQ())),
+                                  Forge::PKI::V2::_bnToBytes(key.get_dQ())),
                            // coefficient (qInv)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
                                   false,
-                                  _bnToBytes(key.getQInv()))
+                                  Forge::PKI::V2::_bnToBytes(key.getQInv()))
 //    ]);
     });
 }

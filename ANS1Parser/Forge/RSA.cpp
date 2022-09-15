@@ -49,10 +49,14 @@ juce::MemoryBlock _bnToBytes(const juce::BigInteger& b)
             mis.readByte();
             mis.readIntoMemoryBlock(trimmed);
         }
+        DBG( "trimmed: " << juce::String::toHexString(trimmed.getData(), trimmed.getSize(), 0));
         return trimmed;                                             //    return bytes.substr(1);
         
     }                                                               //}
+    
+    DBG( "trimmed: " << juce::String::toHexString(trimmed.getData(), trimmed.getSize(), 0));
     return bytes;                                                   //return bytes;
+    
 }
 } //end namespace V2
 namespace V1
