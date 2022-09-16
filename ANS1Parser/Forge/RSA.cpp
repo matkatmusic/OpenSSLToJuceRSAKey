@@ -32,6 +32,15 @@ juce::MemoryBlock _bnToBytes(const juce::BigInteger& b)
     }                                                               //}
     DBG( "hex: " << hex );                                          //console.log(`hex: ${hex}`);
     auto bytes = juce::MemoryBlock();                               //var bytes = forge.util.hexToBytes(hex);
+    
+    /*
+     loadFromHexString() expects the string to have a length that is a multiple of 2.
+     This is not stated in the documentation, but the implementation reveals this. 
+     */
+    if( hex.length() % 2 != 0 )
+    {
+        hex = "0" + hex; 
+    }
     bytes.loadFromHexString(hex);
                                                                     //
     // ensure integer is minimally-encoded                          //// ensure integer is minimally-encoded
@@ -49,12 +58,12 @@ juce::MemoryBlock _bnToBytes(const juce::BigInteger& b)
             mis.readByte();
             mis.readIntoMemoryBlock(trimmed);
         }
-        DBG( "trimmed: " << juce::String::toHexString(trimmed.getData(), trimmed.getSize(), 0));
+        DBG( "_bnToBytes trimmed result: " << juce::String::toHexString(trimmed.getData(), trimmed.getSize(), 0));
         return trimmed;                                             //    return bytes.substr(1);
         
     }                                                               //}
     
-    DBG( "trimmed: " << juce::String::toHexString(trimmed.getData(), trimmed.getSize(), 0));
+    DBG( "_bnToBytes result: " << juce::String::toHexString(bytes.getData(), bytes.getSize(), 0));
     return bytes;                                                   //return bytes;
     
 }

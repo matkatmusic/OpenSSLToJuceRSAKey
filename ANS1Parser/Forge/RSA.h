@@ -1466,7 +1466,7 @@ juce::var wrapRsaPrivateKey(const KeyType& rsaKey)
                     create(ASN1::Class::UNIVERSAL,  //         asn1.create(asn1.Class.UNIVERSAL,
                         ASN1::Type::NULL_,          //            asn1.Type.NULL,
                         false,                      //            false,
-                        juce::var{})                //            '')
+                        juce::var())                //            '')
                 }                                   //    ]
                 ),                                  //    ),
                  // PrivateKey                      //    // PrivateKey

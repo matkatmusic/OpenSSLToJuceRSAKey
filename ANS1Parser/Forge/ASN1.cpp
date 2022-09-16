@@ -1152,6 +1152,7 @@ juce::var toDer(const juce::var& obj)
             if(! entry.isUndefined() && !entry.isVoid())                                //        if(obj.value[i] !== undefined)
             {                                                                           //        {
                 auto der = ASN1::V2::toDer(entry);                                      //            var der = asn1.toDer(obj.value[i]);
+//                DBG( juce::JSON::toString(entry));
                 if( !der.isBinaryData() )
                 {
                     jassertfalse;
@@ -1190,55 +1191,60 @@ juce::var toDer(const juce::var& obj)
         }                                                                               //    }
         else                                                                            //    else
         {                                                                               //    {
+
             jassert(obj.hasProperty("type"));
             jassert(obj.hasProperty("value"));
             auto v = obj["value"];
-            if(! v.isBinaryData() && obj["value"].isVoid() )
-            {
-                jassertfalse;
-                return {};
-            }
-            
-            const auto bd = *obj["value"].getBinaryData();
-            juce::MemoryInputStream mis(bd, false);
+
             // ensure integer is minimally-encoded
             // TODO: should all leading bytes be stripped vs just one?
             // .. ex '00 00 01' => '01'?
-            if(obj["type"].equalsWithSameType(static_cast<int>(ASN1::Type::INTEGER)) && //        if(obj.type === asn1.Type.INTEGER &&
-               bd.getSize() > 1 &&                                                      //           obj.value.length > 1 &&
-               // leading 0x00 for positive integer                                     //           // leading 0x00 for positive integer
-               ((static_cast<juce::uint8>(bd[0]) == 0 &&                                //           ((obj.value.charCodeAt(0) === 0 &&
-                 (static_cast<juce::uint8>(bd[1]) & 0x80) == 0) ||                      //             (obj.value.charCodeAt(1) & 0x80) === 0) ||
-                // leading 0xFF for negative integer                                    //            // leading 0xFF for negative integer
-                 (static_cast<juce::uint8>(bd[0]) == 0xFF &&                            //            (obj.value.charCodeAt(0) === 0xFF &&
-                  (static_cast<juce::uint8>(bd[1]) & 0x80) == 0x80)))                   //             (obj.value.charCodeAt(1) & 0x80) === 0x80)))
-            {                                                                           //        {
-                mis.readByte(); //this advances the read position by 1
-                auto pos = mis.getPosition();
-                auto bytesToPut = juce::MemoryBlock();
-                auto mos = juce::MemoryOutputStream(bytesToPut, false);
-                mos.writeFromInputStream(mis, mis.getNumBytesRemaining());              //            var bytesToPut = obj.value.substr(1);
-                mos.flush();
+            if( v.isBinaryData() )
+            {
+                auto mb = *v.getBinaryData();
+                juce::MemoryInputStream mis(mb, false);
+                
+                if(obj["type"].equalsWithSameType(static_cast<int>(ASN1::Type::INTEGER)) && //        if(obj.type === asn1.Type.INTEGER &&
+                   mb.getSize() > 1 &&                                                      //           obj.value.length > 1 &&
+                   // leading 0x00 for positive integer                                     //           // leading 0x00 for positive integer
+                   ((static_cast<juce::uint8>(mb[0]) == 0 &&                                //           ((obj.value.charCodeAt(0) === 0 &&
+                     (static_cast<juce::uint8>(mb[1]) & 0x80) == 0) ||                      //             (obj.value.charCodeAt(1) & 0x80) === 0) ||
+                    // leading 0xFF for negative integer                                    //            // leading 0xFF for negative integer
+                     (static_cast<juce::uint8>(mb[0]) == 0xFF &&                            //            (obj.value.charCodeAt(0) === 0xFF &&
+                      (static_cast<juce::uint8>(mb[1]) & 0x80) == 0x80)))                   //             (obj.value.charCodeAt(1) & 0x80) === 0x80)))
+                {                                                                           //        {
+                    mis.readByte(); //this advances the read position by 1
+                    auto pos = mis.getPosition();
+                    auto bytesToPut = juce::MemoryBlock();
+                    auto mos = juce::MemoryOutputStream(bytesToPut, false);
+                    mos.writeFromInputStream(mis, mis.getNumBytesRemaining());              //            var bytesToPut = obj.value.substr(1);
+                    mos.flush();
+                    jassertfalse;
+                    DBG("bytesToPut: " << juce::String::toHexString(bytesToPut.getData(),   //            console.log(`bytesToPut: ${bytesToPut}`);
+                                                                    bytesToPut.getSize(),
+                                                                    0));
+                    mis.setPosition(pos);
+                    value.writeFromInputStream(mis, mis.getNumBytesRemaining());            //            value.putBytes(bytesToPut);
+                }                                                                           //        }
+                else                                                                        //        else
+                {                                                                           //        {
+                    auto pos = mis.getPosition();
+                    auto bytesToPut = juce::MemoryBlock();
+                    auto mos = juce::MemoryOutputStream(bytesToPut, false);
+                    mos.writeFromInputStream(mis, mis.getNumBytesRemaining());
+                    mos.flush();
+                    DBG( "obj.value: " << juce::String::toHexString(bytesToPut.getData(),
+                                                                    bytesToPut.getSize(),
+                                                                    0));
+                    mis.setPosition(pos);
+                    value.writeFromInputStream(mis, mis.getNumBytesRemaining());            //            value.putBytes(obj.value);
+                }                                                                           //        }
+            }
+            else if(! v.isVoid() )
+            {
+                //do nothing for now.
                 jassertfalse;
-                DBG("bytesToPut: " << juce::String::toHexString(bytesToPut.getData(),   //            console.log(`bytesToPut: ${bytesToPut}`);
-                                                                bytesToPut.getSize(),
-                                                                0));
-                mis.setPosition(pos);
-                value.writeFromInputStream(mis, mis.getNumBytesRemaining());            //            value.putBytes(bytesToPut);
-            }                                                                           //        }
-            else                                                                        //        else
-            {                                                                           //        {
-                auto pos = mis.getPosition();
-                auto bytesToPut = juce::MemoryBlock();
-                auto mos = juce::MemoryOutputStream(bytesToPut, false);
-                mos.writeFromInputStream(mis, mis.getNumBytesRemaining());
-                mos.flush();
-                DBG( "obj.value: " << juce::String::toHexString(bytesToPut.getData(),
-                                                                bytesToPut.getSize(),
-                                                                0));
-                mis.setPosition(pos);
-                value.writeFromInputStream(mis, mis.getNumBytesRemaining());            //            value.putBytes(obj.value);
-            }                                                                           //        }
+            }
         }                                                                               //    }
     }                                                                                   //}
                                                                                         //
