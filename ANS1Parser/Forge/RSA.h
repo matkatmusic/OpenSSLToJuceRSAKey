@@ -1638,7 +1638,7 @@ KeyType privateKeyFromAsn1(juce::var obj)
     auto dQ = getHexFromProp("privateKeyExponent2");
     auto qInv = getHexFromProp("privateKeyCoefficient");
     
-    
+    DBG( "\n\n\n\n" );
     DBG( "n: " << n );
     DBG( "e: " << e );
     DBG( "d: " << d );
@@ -1647,6 +1647,7 @@ KeyType privateKeyFromAsn1(juce::var obj)
     DBG( "dP: " << dP );
     DBG( "dQ: " << dQ );
     DBG( "qInv: " << qInv );
+    DBG( "\n\n\n\n" );
     
     auto getBigInt = [](juce::String hex) -> juce::BigInteger
     {
@@ -2288,8 +2289,10 @@ ReturnType publicKeyFromASN1(juce::var obj)
     const auto& expMB = *capture["publicKeyExponent"].getBinaryData();
     auto e = juce::String::toHexString(expMB.getData(), expMB.getSize(), 0);
     
+    DBG( "\n\n\n\n" );
     DBG( "n: " << n );
     DBG( "e: " << e );
+    DBG( "\n\n\n\n" );
     // set public key
     auto nbi = juce::BigInteger();
     nbi.parseString(n, 16);
