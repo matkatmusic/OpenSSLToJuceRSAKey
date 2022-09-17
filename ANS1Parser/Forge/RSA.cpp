@@ -142,6 +142,37 @@ juce::var createObject(std::vector<juce::NamedValueSet::NamedValue> props)
 //};
 juce::var getRSAPublicKeyValidator()
 {
+    auto rsaPublicKeyValidator =                                            //var rsaPublicKeyValidator =
+    createObject({                                                          //{
+        // RSAPublicKey                                                     //    // RSAPublicKey
+        {"name", "RSAPublicKey"},                                           //    name: 'RSAPublicKey',
+        {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},             //    tagClass: asn1.Class.UNIVERSAL,
+        {"type", static_cast<int>(ASN1::Type::SEQUENCE)},                   //    type: asn1.Type.SEQUENCE,
+        {"constructed", true},                                              //    constructed: true,
+        {"value", juce::Array<juce::var>                                    //    value:
+        {                                                                   //    [
+            createObject({                                                  //        {
+                // modulus (n)                                              //        // modulus (n)
+                {"name", "RSAPublicKey.modulus"},                           //            name: 'RSAPublicKey.modulus',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},     //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},            //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                     //            constructed: false,
+                {"capture", "publicKeyModulus"}                             //            capture: 'publicKeyModulus'
+            }),                                                             //        },
+            createObject({                                                  //        {
+                // publicExponent (e)                                       //        // publicExponent (e)
+                {"name", "RSAPublicKey.exponent"},                          //            name: 'RSAPublicKey.exponent',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},     //            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::INTEGER)},            //            type: asn1.Type.INTEGER,
+                {"constructed", false},                                     //            constructed: false,
+                {"capture", "publicKeyExponent"}                            //            capture: 'publicKeyExponent'
+            })                                                              //        }
+        }}                                                                  //    ]
+    });                                                                     //};
+    
+    return rsaPublicKeyValidator;
+#if false
+    {
     juce::var v( new juce::DynamicObject() );
     auto* obj = v.getDynamicObject();
     
@@ -185,10 +216,62 @@ juce::var getRSAPublicKeyValidator()
     
     obj->setProperty("value", juce::Array<juce::var>{modulus, publicExponent});
     return v;
+    }
+#endif
 }
 
 juce::var getPublicKeyValidator()
 {
+    auto publicKeyValidator = //var publicKeyValidator = forge.pki.rsa.publicKeyValidator =
+    createObject({//{
+        {"name", "SubjectPublicKeyInfo"},//    name: 'SubjectPublicKeyInfo',
+        {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},//    tagClass: asn1.Class.UNIVERSAL,
+        {"type", static_cast<int>(ASN1::Type::SEQUENCE)},//    type: asn1.Type.SEQUENCE,
+        {"constructed", true},//    constructed: true,
+        {"captureAsn1", "subjectPublicKeyInfo"},//    captureAsn1: 'subjectPublicKeyInfo',
+        {"value",//    value:
+        juce::Array<juce::var>{//    [
+            createObject({//        {
+                {"name", "SubjectPublicKeyInfo.AlgorithmIdentifier"},//        name: 'SubjectPublicKeyInfo.AlgorithmIdentifier',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},//        tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::SEQUENCE)},//        type: asn1.Type.SEQUENCE,
+                {"constructed", true},//        constructed: true,
+                {"value",//        value:
+                juce::Array<juce::var>{//            [
+                    createObject({//                {
+                        {"name", "AlgorithmIdentifier.algorithm"},//                name: 'AlgorithmIdentifier.algorithm',
+                        {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},//                tagClass: asn1.Class.UNIVERSAL,
+                        {"type", static_cast<int>(ASN1::Type::OID)},//                type: asn1.Type.OID,
+                        {"constructed", false},//                constructed: false,
+                        {"capture", "publicKeyOid"}//                capture: 'publicKeyOid'
+                    })//                }
+                }}//            ]
+            }),//        },
+            createObject({//        {
+            // subjectPublicKey//            // subjectPublicKey
+                {"name", "SubjectPublicKeyInfo.subjectPublicKey"},//            name: 'SubjectPublicKeyInfo.subjectPublicKey',
+                {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},//            tagClass: asn1.Class.UNIVERSAL,
+                {"type", static_cast<int>(ASN1::Type::BITSTRING)},//            type: asn1.Type.BITSTRING,
+                {"constructed", false},//            constructed: false,
+                {"value",//            value:
+                juce::Array<juce::var>{//            [
+                    createObject({//                {
+                        // RSAPublicKey//                // RSAPublicKey
+                        {"name", "SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey"},//                name: 'SubjectPublicKeyInfo.subjectPublicKey.RSAPublicKey',
+                        {"tagClass", static_cast<int>(ASN1::Class::UNIVERSAL)},//                tagClass: asn1.Class.UNIVERSAL,
+                        {"type", static_cast<int>(ASN1::Type::SEQUENCE)},//                type: asn1.Type.SEQUENCE,
+                        {"constructed", true},//                constructed: true,
+                        {"optional", true},//                optional: true,
+                        {"captureAsn1", "rsaPublicKey"}//                captureAsn1: 'rsaPublicKey'
+                    })//                }
+                }}//            ]
+            })//        }
+        }}//    ]
+    });//};
+    
+    return publicKeyValidator;
+#if false
+    {
     juce::var v ( new juce::DynamicObject() );
     auto* o = v.getDynamicObject();
      // validator for an SubjectPublicKeyInfo structure
@@ -268,6 +351,8 @@ juce::var getPublicKeyValidator()
     o->setProperty("value", juce::Array<juce::var>(algoIdentifier, subjectPublicKey));
 //    };
     return v;
+    }
+#endif
 }
 
 juce::var getPrivateKeyValidator()
