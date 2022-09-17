@@ -1648,7 +1648,7 @@ KeyType privateKeyFromAsn1(juce::var obj)
     DBG( "dQ: " << dQ );
     DBG( "qInv: " << qInv );
     
-    auto getBigInt = [](juce::String hex)
+    auto getBigInt = [](juce::String hex) -> juce::BigInteger
     {
         auto bi = juce::BigInteger();
         bi.parseString(hex, 16);
@@ -1778,12 +1778,12 @@ juce::var privateKeyToAsn1(const KeyType& key)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
                                   false,
-                                  Forge::PKI::V2::_bnToBytes(key.getModulus())),
+                                  Forge::PKI::V2::_bnToBytes(key.getN())),
                            // publicExponent (e)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
                                   false,
-                                  Forge::PKI::V2::_bnToBytes(key.getExponent())),
+                                  Forge::PKI::V2::_bnToBytes(key.getE())),
                            // privateExponent (d)
                            create(ASN1::Class::UNIVERSAL,//asn1.Class.UNIVERSAL,
                                   ASN1::Type::INTEGER,//asn1.Type.INTEGER,
@@ -2293,9 +2293,10 @@ ReturnType publicKeyFromASN1(juce::var obj)
     // set public key
     auto nbi = juce::BigInteger();
     nbi.parseString(n, 16);
-    
+    DBG( "nbi: " << nbi.toString(16));
     auto ebi = juce::BigInteger();
     ebi.parseString(e, 16);
+    DBG( "ebi: " << ebi.toString(16));
     
 #if false
     constexpr int bitIncrement = sizeof(juce::uint32) * 8;
@@ -2307,7 +2308,7 @@ ReturnType publicKeyFromASN1(juce::var obj)
     }
 #endif
     
-    return ReturnType(nbi.toString(16) + "," + ebi.toString(16));
+    return ReturnType(nbi, ebi);
 //    return pki.setRsaPublicKey(
 //                               new BigInteger(n, 16),
 //                               new BigInteger(e, 16));
