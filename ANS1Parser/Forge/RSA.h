@@ -2432,7 +2432,7 @@ juce::var publicKeyToAsn1(const KeyType& key)
                                    juce::Array<juce::var>{                  //                                   [ //begin array
                                                                             //                                       // algorithm
                                         create(ASN1::Class::UNIVERSAL,      //                                       asn1.create(asn1.Class.UNIVERSAL,
-                                               ASN1::Type::                 //                                                   asn1.Type.OID,
+                                               ASN1::Type::OID,             //                                                   asn1.Type.OID,
                                                false,                       //                                                   false,
                                                ASN1::V1::oidToDer(oid)),    //                                                   asn1.oidToDer(pki.oids.rsaEncryption).getBytes()),
                                                                             //                                       // parameters (null)
