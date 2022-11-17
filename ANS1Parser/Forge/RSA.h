@@ -2371,6 +2371,7 @@ juce::var publicKeyToAsn1(const KeyType& key)
     ])
   ]);
 #endif
+
     const auto& oids = PKI::oids();
     auto oid = Forge::PKI::V1::findOID("rsaEncryption");
     
@@ -2383,6 +2384,7 @@ juce::var publicKeyToAsn1(const KeyType& key)
     using namespace Forge::ASN1::V2;
     using namespace Forge::PKI::V2;
     
+#if false
     // SubjectPublicKeyInfo
     auto asn1 = create(ASN1::Class::UNIVERSAL,
                        ASN1::Type::SEQUENCE,
@@ -2414,6 +2416,42 @@ juce::var publicKeyToAsn1(const KeyType& key)
             publicKeyToRSAPublicKey(key)
                })
                        });
+    
+    return asn1;
+#endif
+    
+    
+    auto asn1 = create(ASN1::Class::UNIVERSAL,                              //return asn1.create(asn1.Class.UNIVERSAL,
+                       ASN1::Type::SEQUENCE,                                //                   asn1.Type.SEQUENCE,
+                       true,                                                //                   true,
+                       juce::Array<juce::var>{                              //                   [ //begin array
+                                                                            //                       // AlgorithmIdentifier
+                            create(ASN1::Class::UNIVERSAL,                  //                       asn1.create(asn1.Class.UNIVERSAL,
+                                   ASN1::Type::SEQUENCE,                    //                                   asn1.Type.SEQUENCE,
+                                   true,                                    //                                   true,
+                                   juce::Array<juce::var>{                  //                                   [ //begin array
+                                                                            //                                       // algorithm
+                                        create(ASN1::Class::UNIVERSAL,      //                                       asn1.create(asn1.Class.UNIVERSAL,
+                                               ASN1::Type::                 //                                                   asn1.Type.OID,
+                                               false,                       //                                                   false,
+                                               ASN1::V1::oidToDer(oid)),    //                                                   asn1.oidToDer(pki.oids.rsaEncryption).getBytes()),
+                                                                            //                                       // parameters (null)
+                                        create(ASN1::Class::UNIVERSAL,      //                                       asn1.create(asn1.Class.UNIVERSAL,
+                                               ASN1::Type::NULL_,           //                                                   asn1.Type.NULL,
+                                               false,                       //                                                   false,
+                                               juce::var{})                 //                                                   '')
+                                    }                                       //                                   ] //end array
+                                    ),                                      //                                   ),
+                                                                            //                       // subjectPublicKey
+                            create(ASN1::Class::UNIVERSAL,                  //                       asn1.create(asn1.Class.UNIVERSAL,
+                                   ASN1::Type::BITSTRING,                   //                                   asn1.Type.BITSTRING,
+                                   false,                                   //                                   false,
+                                   juce::Array<juce::var>{                  //                                   [ //begin array
+                                        publicKeyToRSAPublicKey(key)        //                                       pki.publicKeyToRSAPublicKey(key)
+                                    }                                       //                                   ] //end array
+                                   )                                        //                                   )
+                        }                                                   //                   ] //end array
+                       );                                                   //                   );
     
     return asn1;
 }
