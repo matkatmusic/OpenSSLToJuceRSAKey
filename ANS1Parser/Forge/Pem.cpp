@@ -9,6 +9,7 @@
 */
 
 #include "Pem.h"
+#include "Util.h"
 
 namespace Forge
 {
@@ -284,6 +285,8 @@ juce::String foldHeader(const juce::var& header)
 
 juce::String encode(const juce::var& msg, const juce::NamedValueSet& options)
 {
+#if false
+    //TODO: re-translate this entire function.
 //    options = options || {};
     juce::String rval;
 //    var rval = '-----BEGIN ' + msg.type + '-----\r\n';
@@ -398,6 +401,111 @@ juce::String encode(const juce::var& msg, const juce::NamedValueSet& options)
     rval << msg["type"].toString();
     rval << "-----\r\n";
     return rval;
+#endif
+//pem.encode = function(msg, options) {
+                                                                                //    options = options || {};
+    juce::String rval("-----BEGIN " + msg["type"].toString() + "-----" + juce::String::charToString('\r') + juce::String::charToString('\n'));    //    var rval = '-----BEGIN ' + msg.type + '-----\r\n';
+                                                                                //
+                                                                                //    // encode special headers
+    juce::var header;                                                           //    var header;
+    if( msg.hasProperty("procType") )                                           //    if(msg.procType)
+    {                                                                           //    {
+        header = juce::var( new juce::DynamicObject());                         //      header =
+                                                                                //      {
+        header.getDynamicObject()->setProperty("name", "Proc-Type");            //        name: 'Proc-Type',
+        header.getDynamicObject()->setProperty("values", juce::Array<juce::var>{msg["procType"]["version"].toString(), msg["procType"]["type"]});//        values: [String(msg.procType.version), msg.procType.type]
+                                                                                //      };
+        rval += foldHeader(header);                                             //      rval += foldHeader(header);
+    }                                                                           //    }
+    if( msg.hasProperty("contentDomain") )                                      //    if(msg.contentDomain)
+    {                                                                           //    {
+        header = juce::var( new juce::DynamicObject());                         //      header = {name: 'Content-Domain', values: [msg.contentDomain]};
+        header.getDynamicObject()->setProperty("name", "Content-Domain");
+        header.getDynamicObject()->setProperty("values", juce::Array<juce::var>{msg["contentDomain"]});
+        rval += foldHeader(header);                                             //      rval += foldHeader(header);
+    }                                                                           //    }
+    if( msg.hasProperty("dekInfo") )                                            //    if(msg.dekInfo)
+    {                                                                           //    {
+        header = juce::var( new juce::DynamicObject());                         //      header = {name: 'DEK-Info', values: [msg.dekInfo.algorithm]};
+    
+        header.getDynamicObject()->setProperty("name", "DEK-Info");
+        header.getDynamicObject()->setProperty("values", juce::Array<juce::var>{msg["dekInfo"]["algorithm"]});
+        if( msg["dekInfo"].hasProperty("parameters") )                          //      if(msg.dekInfo.parameters)
+        {                                                                       //      {
+                                                                                //        header.values.push(msg.dekInfo.parameters);
+            auto values = header.getDynamicObject()->getProperty("values");
+            jassert(values.isArray());
+            values.getArray()->add(msg["dekInfo"]["parameters"]);
+            header.getDynamicObject()->setProperty("values", values);
+        }                                                                       //      }
+        rval += foldHeader(header);                                             //      rval += foldHeader(header);
+    }                                                                           //    }
+                                                                                //
+    if( msg.hasProperty("headers") )                                            //    if(msg.headers)
+    {                                                                           //    {
+                                                                                //      // encode all other headers
+        auto headersArray = msg["headers"].getArray();
+        jassert(headersArray != nullptr );
+        auto& headers = *headersArray;
+        for( int i = 0; i < headers.size(); ++i )                               //      for(var i = 0; i < msg.headers.length; ++i)
+        {                                                                       //      {
+            rval += foldHeader(headers[i]);                                     //        rval += foldHeader(msg.headers[i]);
+        }                                                                       //      }
+    }                                                                           //    }
+                                                                                //
+                                                                                //    // terminate header
+    if( msg.hasProperty("procType"))                                            //    if(msg.procType)
+    {                                                                           //    {
+        rval += juce::String::charToString('\r') + juce::String::charToString('\n');                                                         //      rval += '\r\n';
+    }                                                                           //    }
+                                                                                //
+                                                                                //    // add body
+                                                                                //    var body = forge.util.encode64(msg.body, options.maxline || 64) + '\r\n';
+    jassert( msg.hasProperty("body") );
+    jassert( msg["body"].isBinaryData() );
+    auto body2 = Forge::Util::encode64(*msg["body"].getBinaryData(), (options.contains("maxline") ? static_cast<int>(options["maxline"]) : 64) ) + juce::String::charToString('\r') + juce::String::charToString('\n');
+    
+    auto* memBlockBody = msg["body"].getBinaryData();
+    auto& mb = *memBlockBody;
+    auto b64 = juce::Base64::toBase64(mb.getData(), mb.getSize());
+    
+    auto maxLineLength = [&msg]() -> int
+    {
+        if( msg.hasProperty("maxLine") && msg["maxLine"].isInt() )
+            return msg["maxLine"].operator int();
+        
+        return 64;
+    }();
+    
+    int i = 0;
+    juce::String body;
+    while( i < b64.length() )
+    {
+        auto subStr = b64.substring(i, i + maxLineLength );
+//        DBG( "subStr: " << subStr );
+        body << subStr;
+        i += maxLineLength;
+        if( i < b64.length() )
+            body << juce::String::charToString('\r') + juce::String::charToString('\n');
+    }
+    
+    body << juce::String::charToString('\r') + juce::String::charToString('\n');
+
+    DBG( "body: " << body );                                                    //    console.log(`body: ${body}`);
+    rval += body;                                                               //    rval += body;
+                                                                                //
+    rval += "-----END " + msg["type"].toString() + "-----" + juce::String::charToString('\r') + juce::String::charToString('\n');                 //    rval += '-----END ' + msg.type + '-----\r\n';
+//    auto len = juce::jmin(body.length(), body2.length());
+//    for(int i = 0; i < len; ++i )
+//    {
+//        if( body[i] != body2[i] )
+//        {
+//            jassertfalse;
+//        }
+//    }
+    
+    return rval;                                                                //    return rval;
+    
 }
 } //end namespace V2
 namespace V1

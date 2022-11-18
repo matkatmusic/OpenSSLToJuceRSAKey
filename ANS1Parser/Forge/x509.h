@@ -897,7 +897,8 @@ namespace V2
 template<typename KeyType>
 KeyType publicKeyFromPem(juce::String pem)
 {
-    auto decoded = Forge::PEM::V2::decode(pem); //this needs to return an array of NamedValueSet instances.
+                                                                                //var msg = forge.pem.decode(pem)[0];
+    auto decoded = Forge::PEM::V2::decode(pem);
     if( std::distance(decoded.begin(), decoded.end()) == 0 )
     {
         jassertfalse;
@@ -906,7 +907,7 @@ KeyType publicKeyFromPem(juce::String pem)
     
     auto msg = decoded[0];
     
-    if(msg.contains("type") && msg.getVarPointer("type")->isString() )
+    if(msg.contains("type") && msg.getVarPointer("type")->isString() )          //if(msg.type !== 'PUBLIC KEY' && msg.type !== 'RSA PUBLIC KEY')
     {
         auto type = msg.getVarPointer("type")->toString();
         if( type != "PUBLIC KEY" && type != "RSA PUBLIC KEY" )
@@ -917,7 +918,7 @@ KeyType publicKeyFromPem(juce::String pem)
         }
     }
     
-    if( msg.contains("procType") &&
+    if( msg.contains("procType") &&                                             //if(msg.procType && msg.procType.type === 'ENCRYPTED')
        msg.getVarPointer("procType")->isString() &&
        msg.getVarPointer("procType")->toString() == "ENCRYPTED" )
     {
@@ -927,7 +928,7 @@ KeyType publicKeyFromPem(juce::String pem)
     }
     
     //             convert DER to ASN.1 object
-    //            var obj = asn1.fromDer(msg.body);
+                                                                                //            var obj = asn1.fromDer(msg.body);
     jassert(msg.contains("body"));
     auto bodyPtr = msg.getVarPointer("body");
     jassert(bodyPtr->isBinaryData());

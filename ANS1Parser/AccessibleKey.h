@@ -28,11 +28,11 @@ struct AccessiblePublicKey : juce::RSAKey
         part2 = n;
     }
     
-    auto& getModulus() { return part1; }
-    const auto& getModulus() const { return part1; }
+    auto& getModulus() { return part2; }
+    const auto& getModulus() const { return part2; }
     
-    auto& getExponent() { return part2; }
-    const auto& getExponent() const { return part2; }
+    auto& getExponent() { return part1; }
+    const auto& getExponent() const { return part1; }
     
     auto& getE() { return part1; }
     const auto& getE() const { return part1; }
