@@ -1021,7 +1021,7 @@ juce::MemoryBlock oidToDer(juce::String oid)
 //asn1.oidToDer = function(oid) {
     // split OID into individual values
 //    var values = oid.split('.');
-    DBG( "OID: " << oid );
+//    DBG( "OID: " << oid );
     auto values = juce::StringArray::fromTokens(oid, ".", "");
 //    var bytes = forge.util.createBuffer();
     auto block = juce::MemoryBlock();
@@ -1067,23 +1067,23 @@ juce::MemoryBlock oidToDer(juce::String oid)
             last = false;
         } while(value > 0);
         
-        for( size_t j = 0; j < valueBytes.size(); ++j ) //for( var j = 0; j < valueBytes.length; ++j )
-        {
-            DBG( "valueBytes[" << i-2 << "][" << j << "]: " << valueBytes[j]);
-        }
+//        for( size_t j = 0; j < valueBytes.size(); ++j ) //for( var j = 0; j < valueBytes.length; ++j )
+//        {
+//            DBG( "valueBytes[" << i-2 << "][" << j << "]: " << valueBytes[j]);
+//        }
         // add value bytes in reverse (needs to be in big endian)
 //        for(var n = valueBytes.length - 1; n >= 0; --n)
         for (auto n = valueBytes.rbegin(); n != valueBytes.rend(); ++n)
         {
 //            bytes.putByte(valueBytes[n]);
             auto byte = *n;
-            DBG( "writing byte: " << byte );
+//            DBG( "writing byte: " << byte );
             bytes.writeByte(byte);
         }
     }
 
     bytes.flush();
-    DBG( "OID bytes: " << juce::String::toHexString(block.getData(), block.getSize(), 0));
+//    DBG( "OID bytes: " << juce::String::toHexString(block.getData(), block.getSize(), 0));
     return block;
 }
 } //end namespace V1
@@ -1160,10 +1160,10 @@ juce::var toDer(const juce::var& obj)
                 else
                 {
                     auto memoryBlockToAdd = *der.getBinaryData();
-                    DBG( "ASN1::toDer(varToAdd:" );                                     //            console.log("ASN1::toDer(varToAdd:");
-                    DBG( juce::String::toHexString(memoryBlockToAdd.getData(),          //            console.log(der.toHex());
-                                                   memoryBlockToAdd.getSize(),
-                                                   0));
+//                    DBG( "ASN1::toDer(varToAdd:" );                                     //            console.log("ASN1::toDer(varToAdd:");
+//                    DBG( juce::String::toHexString(memoryBlockToAdd.getData(),          //            console.log(der.toHex());
+//                                                   memoryBlockToAdd.getSize(),
+//                                                   0));
                     auto mis = juce::MemoryInputStream(memoryBlockToAdd, false);
                     value.writeFromInputStream(mis, mis.getNumBytesRemaining());        //            value.putBuffer(der);
                 }
@@ -1233,9 +1233,9 @@ juce::var toDer(const juce::var& obj)
                     auto mos = juce::MemoryOutputStream(bytesToPut, false);
                     mos.writeFromInputStream(mis, mis.getNumBytesRemaining());
                     mos.flush();
-                    DBG( "obj.value: " << juce::String::toHexString(bytesToPut.getData(),
-                                                                    bytesToPut.getSize(),
-                                                                    0));
+//                    DBG( "obj.value: " << juce::String::toHexString(bytesToPut.getData(),
+//                                                                    bytesToPut.getSize(),
+//                                                                    0));
                     mis.setPosition(pos);
                     value.writeFromInputStream(mis, mis.getNumBytesRemaining());            //            value.putBytes(obj.value);
                 }                                                                           //        }
@@ -1297,9 +1297,9 @@ juce::var toDer(const juce::var& obj)
     juce::MemoryInputStream mis(valueBlock, false);
     bytes.writeFromInputStream(mis, mis.getNumBytesRemaining());                        //bytes.putBuffer(value);
     bytes.flush();
-    DBG("toDer() result: " << juce::String::toHexString(bytesBlock.getData(),           //console.log(`toDer() result: ${bytes.toHex()}`);
-                                                        bytesBlock.getSize(),
-                                                        0) );
+//    DBG("toDer() result: " << juce::String::toHexString(bytesBlock.getData(),           //console.log(`toDer() result: ${bytes.toHex()}`);
+//                                                        bytesBlock.getSize(),
+//                                                        0) );
     return bytesBlock;                                                                  //return bytes;
 #if false
 //asn1.toDer = function(obj)

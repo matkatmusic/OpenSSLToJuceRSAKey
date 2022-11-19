@@ -393,7 +393,7 @@ juce::String encode(const juce::var& msg, const juce::NamedValueSet& options)
             body << "\r\n";
     }
     
-    DBG( "body: " << body ); //console.log(`body: ${body}`);
+//    DBG( "body: " << body ); //console.log(`body: ${body}`);
     rval << body;
     rval << "\r\n";
 //    rval += '-----END ' + msg.type + '-----\r\n';
@@ -491,7 +491,7 @@ juce::String encode(const juce::var& msg, const juce::NamedValueSet& options)
     
     body << juce::String::charToString('\r') + juce::String::charToString('\n');
 
-    DBG( "body: " << body );                                                    //    console.log(`body: ${body}`);
+//    DBG( "body: " << body );                                                    //    console.log(`body: ${body}`);
     rval += body;                                                               //    rval += body;
                                                                                 //
     rval += "-----END " + msg["type"].toString() + "-----" + juce::String::charToString('\r') + juce::String::charToString('\n');                 //    rval += '-----END ' + msg.type + '-----\r\n';

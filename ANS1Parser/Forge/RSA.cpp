@@ -30,7 +30,7 @@ juce::MemoryBlock _bnToBytes(const juce::BigInteger& b)
     {                                                               //{
         hex = "00" + hex;                                           //    hex = '00' + hex;
     }                                                               //}
-    DBG( "hex: " << hex );                                          //console.log(`hex: ${hex}`);
+//    DBG( "hex: " << hex );                                          //console.log(`hex: ${hex}`);
     auto bytes = juce::MemoryBlock();                               //var bytes = forge.util.hexToBytes(hex);
     
     /*
@@ -63,7 +63,7 @@ juce::MemoryBlock _bnToBytes(const juce::BigInteger& b)
         
     }                                                               //}
     
-    DBG( "_bnToBytes result: " << juce::String::toHexString(bytes.getData(), bytes.getSize(), 0));
+//    DBG( "_bnToBytes result: " << juce::String::toHexString(bytes.getData(), bytes.getSize(), 0));
     return bytes;                                                   //return bytes;
     
 }
