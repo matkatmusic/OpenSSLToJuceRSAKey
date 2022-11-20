@@ -1638,16 +1638,16 @@ KeyType privateKeyFromAsn1(juce::var obj)
     auto dQ = getHexFromProp("privateKeyExponent2");
     auto qInv = getHexFromProp("privateKeyCoefficient");
     
-    DBG( "\n\n\n\n" );
-    DBG( "n: " << n );
-    DBG( "e: " << e );
-    DBG( "d: " << d );
-    DBG( "p: " << p );
-    DBG( "q: " << q );
-    DBG( "dP: " << dP );
-    DBG( "dQ: " << dQ );
-    DBG( "qInv: " << qInv );
-    DBG( "\n\n\n\n" );
+//    DBG( "\n\n\n\n" );
+//    DBG( "n: " << n );
+//    DBG( "e: " << e );
+//    DBG( "d: " << d );
+//    DBG( "p: " << p );
+//    DBG( "q: " << q );
+//    DBG( "dP: " << dP );
+//    DBG( "dQ: " << dQ );
+//    DBG( "qInv: " << qInv );
+//    DBG( "\n\n\n\n" );
     
     auto getBigInt = [](juce::String hex) -> juce::BigInteger
     {
