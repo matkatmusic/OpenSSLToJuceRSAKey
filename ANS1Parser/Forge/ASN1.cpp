@@ -84,7 +84,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
     // minimum length for ASN.1 DER structure is 2
     V1::_checkBufferLength(bytes, remaining, 2);                                        //_checkBufferLength(bytes, remaining, 2);
                                                                                         //
-    DBG("_fromDer( remaining: " << remaining << ", depth: " << depth << ", bytes: )");  //console.log("_fromDer( remaining: %d, depth: %d, bytes: )", remaining, depth );
+//    DBG("_fromDer( remaining: " << remaining << ", depth: " << depth << ", bytes: )");  //console.log("_fromDer( remaining: %d, depth: %d, bytes: )", remaining, depth );
     auto pos = bytes.getPosition();                                                     //var pos = bytes.read;
     {
         juce::MemoryBlock mb(remaining);
@@ -160,7 +160,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
                     break;                                                              //                break;
                 }                                                                       //            }
                 start = bytes.getNumBytesRemaining();                                   //            start = bytes.length();
-                DBG( "creating value from push(_fromDer()) with indefinite length");    //            console.log( "creating value from push(_fromDer()) with indefinite length");
+//                DBG( "creating value from push(_fromDer()) with indefinite length");    //            console.log( "creating value from push(_fromDer()) with indefinite length");
                 value.append(_fromDer(bytes, remaining, depth + 1, options));           //            value.push(_fromDer(bytes, remaining, depth + 1, options));
                 remaining -= start - bytes.getNumBytesRemaining();                      //            remaining -= start - bytes.length();
             }                                                                           //        }
@@ -171,7 +171,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
             while(length > 0)                                                           //        while(length > 0)
             {                                                                           //        {
                 start = bytes.getNumBytesRemaining();                                   //            start = bytes.length();
-                DBG( "creating value from push(_fromDer()) with definite length");      //            console.log( "creating value from push(_fromDer()) with definite length");
+//                DBG( "creating value from push(_fromDer()) with definite length");      //            console.log( "creating value from push(_fromDer()) with definite length");
                 value.append(_fromDer(bytes, length, depth + 1, options));              //            value.push(_fromDer(bytes, length, depth + 1, options));
                 remaining -= start - bytes.getNumBytesRemaining();                      //            remaining -= start - bytes.length();
                 length -= start - bytes.getNumBytesRemaining();                         //            length -= start - bytes.length();
@@ -244,7 +244,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
                 if(used == length &&                                                    //            if(used === length &&
                    (tc == ASN1::Class::UNIVERSAL || tc == ASN1::Class::CONTEXT_SPECIFIC))//              (tc === asn1.Class.UNIVERSAL || tc === asn1.Class.CONTEXT_SPECIFIC))
                 {                                                                       //            {
-                    DBG( "creating value = [composed];");                               //                console.log( "creating value = [composed];");
+//                    DBG( "creating value = [composed];");                               //                console.log( "creating value = [composed];");
                     value = juce::Array<juce::var>();                                   //                value = [composed];
                     value.append(composed);
                 }                                                                       //            }
@@ -280,7 +280,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
         if(type == ASN1::Type::BMPSTRING)                                               //    if(type === asn1.Type.BMPSTRING)
         {                                                                               //    {
             auto tempStr = juce::String();                                              //        value = '';
-            DBG( "creating value from String.fromCharCode(bytes.getInt16());");         //        console.log( "creating value from String.fromCharCode(bytes.getInt16());");
+//            DBG( "creating value from String.fromCharCode(bytes.getInt16());");         //        console.log( "creating value from String.fromCharCode(bytes.getInt16());");
             for(; length > 0; length -= 2)                                              //        for(; length > 0; length -= 2)
             {                                                                           //        {
                 V1::_checkBufferLength(bytes, remaining, 2);                            //            _checkBufferLength(bytes, remaining, 2);
@@ -299,7 +299,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
                 juce::MemoryOutputStream mos(mb, false);
                 mos.writeFromInputStream(bytes, length);
             }
-            DBG( "creating value from bytes.getBytes(" << length << ")");               //        console.log( `creating value from bytes.getBytes(${length})`);
+//            DBG( "creating value from bytes.getBytes(" << length << ")");               //        console.log( `creating value from bytes.getBytes(${length})`);
             value = mb;                                                                 //        value = bytes.getBytes(length);
             remaining -= length;                                                        //        remaining -= length;
         }                                                                               //    }
@@ -327,7 +327,7 @@ juce::var _fromDer(juce::MemoryInputStream& bytes,
     V1::_checkBufferLength(bytes, remaining, 2);
     
 //    console.log("_fromDer( remaining: %d, depth: %d, bytes: )", remaining, depth );
-    DBG("_fromDer( remaining: " << remaining << ", depth: " << depth << ", bytes: )");
+//    DBG("_fromDer( remaining: " << remaining << ", depth: " << depth << ", bytes: )");
 //    var pos = bytes.read;
     auto pos = bytes.getPosition();
 //    console.log(forge.util.binary.hex.encode(bytes.getBytes(remaining)));
