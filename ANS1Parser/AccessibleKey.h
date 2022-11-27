@@ -130,3 +130,76 @@ private:
     juce::BigInteger dQ_bi;
     juce::BigInteger qInv_bi;
 };
+
+inline juce::BigInteger findBestCommonDivisor (const juce::BigInteger& p, const juce::BigInteger& q)
+{
+    // try 3, 5, 9, 17, etc first because these only contain 2 bits and so
+    // are fast to divide + multiply
+    for (int i = 2; i <= 65536; i *= 2)
+    {
+        const juce::BigInteger e (1 + i);
+
+        if (e.findGreatestCommonDivisor (p).isOne() && e.findGreatestCommonDivisor (q).isOne())
+            return e;
+    }
+
+    juce::BigInteger e (4);
+
+    while (! (e.findGreatestCommonDivisor (p).isOne() && e.findGreatestCommonDivisor (q).isOne()))
+        ++e;
+
+    return e;
+}
+
+inline auto createAccessibleKeyPair(const int numBits, const int* randomSeeds, const int numRandomSeeds) -> std::tuple<AccessiblePublicKey, AccessiblePrivateKey>
+{
+    using namespace juce;
+    
+    /*
+     this is a copy of juce::RSA::createKeyPair internals
+     */
+    jassert (numBits > 16); // not much point using less than this..
+    jassert (numRandomSeeds == 0 || numRandomSeeds >= 2); // you need to provide plenty of seeds here!
+
+    BigInteger p (Primes::createProbablePrime (numBits / 2, 30, randomSeeds, numRandomSeeds / 2));
+    BigInteger q (Primes::createProbablePrime (numBits - numBits / 2, 30, randomSeeds == nullptr ? nullptr : (randomSeeds + numRandomSeeds / 2), numRandomSeeds - numRandomSeeds / 2));
+
+    const BigInteger n (p * q);
+    auto pMinus1 = --p;
+    auto qMinus1 = --q;
+    const BigInteger m (pMinus1 * qMinus1);
+    const BigInteger e (findBestCommonDivisor (p, q));
+
+    BigInteger d (e);
+    d.inverseModulo (m);
+    
+    
+    /*
+     juce::RSA::createKeyPair does not compute dP, dQ, and qInv, which are needed to correctly generate an ASN.1 RSA Key in PEM format.
+     
+     dP, dQ, and qInv are computed as shown in this image:
+     https://en.wikipedia.org/wiki/RSA_(cryptosystem)#:~:text=The%20following%20values%20are%20precomputed%20and%20stored%20as%20part%20of%20the%20private%20key%3A
+     note that p-1 and q-1 were computed above: (--p * --q);
+     */
+    BigInteger dP;
+    dP = d % (pMinus1);
+    
+    BigInteger dQ;
+    dQ = d % (qMinus1);
+    
+    BigInteger qInv ( q );
+    qInv.inverseModulo(p); //this is the juce way of computing (q^-1) mod p
+    
+    auto privateKey = AccessiblePrivateKey(n,
+                                      e,
+                                      d,
+                                      p,
+                                      q,
+                                      dP, //private key exponent1
+                                      dQ, //private key exponent2
+                                      qInv); //private key coefficient
+    
+    auto publicKey = privateKey.getDerivedPublicKey();
+    
+    return std::make_tuple(publicKey, privateKey);
+}
