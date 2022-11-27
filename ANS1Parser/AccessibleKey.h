@@ -14,8 +14,8 @@
 struct AccessiblePublicKey : juce::RSAKey
 {
     AccessiblePublicKey() = default;
-    AccessiblePublicKey(const juce::BigInteger& n,
-                        const juce::BigInteger& e)
+    AccessiblePublicKey(const juce::BigInteger& n, //modulus
+                        const juce::BigInteger& e) //public exponent
     {
         /*
          publicKey.part1 = e;
@@ -44,14 +44,14 @@ struct AccessiblePublicKey : juce::RSAKey
 struct AccessiblePrivateKey : juce::RSAKey
 {
     AccessiblePrivateKey() = default;
-    AccessiblePrivateKey(const juce::BigInteger& n_bi_,
-                         const juce::BigInteger& e_bi_,
-                         const juce::BigInteger& d_bi_,
-                         const juce::BigInteger& p_bi_,
-                         const juce::BigInteger& q_bi_,
-                         const juce::BigInteger& dP_bi_,
-                         const juce::BigInteger& dQ_bi_,
-                         const juce::BigInteger& qInv_bi_)
+    AccessiblePrivateKey(const juce::BigInteger& n_bi_, //modulus
+                         const juce::BigInteger& e_bi_, //public exponent
+                         const juce::BigInteger& d_bi_, //private exponent
+                         const juce::BigInteger& p_bi_, //prime1
+                         const juce::BigInteger& q_bi_, //prime2
+                         const juce::BigInteger& dP_bi_, //exponent1: d mod (p-1)
+                         const juce::BigInteger& dQ_bi_, //exponent2: d mod (q-1)
+                         const juce::BigInteger& qInv_bi_) //coeff: (q^-1) mod p
     {
         /*
          publicKey.part1 = e;
@@ -99,7 +99,7 @@ struct AccessiblePrivateKey : juce::RSAKey
     
     AccessiblePublicKey getDerivedPublicKey() const
     {
-        return AccessiblePublicKey(e_bi, n_bi);
+        return AccessiblePublicKey(n_bi, e_bi);
     }
     
     friend bool operator==(const AccessiblePrivateKey& lhs,
