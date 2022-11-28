@@ -44,6 +44,7 @@ struct AccessiblePublicKey : juce::RSAKey
 struct AccessiblePrivateKey : juce::RSAKey
 {
     AccessiblePrivateKey() = default;
+    //https://myarch.com/public-private-key-file-formats
     AccessiblePrivateKey(const juce::BigInteger& n_bi_, //modulus
                          const juce::BigInteger& e_bi_, //public exponent
                          const juce::BigInteger& d_bi_, //private exponent
